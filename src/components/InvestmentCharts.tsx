@@ -32,21 +32,32 @@ const COLORS = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+  "hsl(var(--chart-9))",
+  "hsl(var(--chart-10))",
 ];
 
+// Função para gerar cor por ticker
+const getColorForTicker = (ticker: string, index: number) => {
+  const hash = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return COLORS[hash % COLORS.length];
+};
+
 export const InvestmentCharts = ({ investments, quotes }: InvestmentChartsProps) => {
-  // Distribuição por tipo
-  const distributionData = Object.entries(
-    investments.reduce((acc, inv) => {
-      const currentValue = quotes[inv.ticker]
-        ? inv.quantity * quotes[inv.ticker].regularMarketPrice
-        : inv.quantity * inv.average_price;
-      
-      const type = typeLabels[inv.type] || inv.type;
-      acc[type] = (acc[type] || 0) + currentValue;
-      return acc;
-    }, {} as { [key: string]: number })
-  ).map(([name, value]) => ({ name, value }));
+  // Distribuição por ativo individual
+  const distributionData = investments.map((inv, index) => {
+    const currentValue = quotes[inv.ticker]
+      ? inv.quantity * quotes[inv.ticker].regularMarketPrice
+      : inv.quantity * inv.average_price;
+    
+    return {
+      name: inv.ticker,
+      value: currentValue,
+      color: getColorForTicker(inv.ticker, index),
+    };
+  }).sort((a, b) => b.value - a.value);
 
   // Evolução ao longo do tempo (agrupado por mês)
   const evolutionData = investments
@@ -91,7 +102,7 @@ export const InvestmentCharts = ({ investments, quotes }: InvestmentChartsProps)
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Distribuição por Tipo</CardTitle>
+          <CardTitle>Distribuição por Ativo</CardTitle>
         </CardHeader>
         <CardContent>
           {distributionData.length > 0 ? (
@@ -108,7 +119,7 @@ export const InvestmentCharts = ({ investments, quotes }: InvestmentChartsProps)
                   dataKey="value"
                 >
                   {distributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip

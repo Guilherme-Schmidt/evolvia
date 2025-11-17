@@ -1,15 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, PiggyBank } from "lucide-react";
 
 interface FinancialSummaryProps {
   totalIncome: number;
   totalExpense: number;
   balance: number;
+  totalInvestments?: number;
 }
 
-export const FinancialSummary = ({ totalIncome, totalExpense, balance }: FinancialSummaryProps) => {
+export const FinancialSummary = ({ totalIncome, totalExpense, balance, totalInvestments }: FinancialSummaryProps) => {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Receitas</CardTitle>
@@ -45,6 +46,20 @@ export const FinancialSummary = ({ totalIncome, totalExpense, balance }: Financi
           </div>
         </CardContent>
       </Card>
+
+      {totalInvestments !== undefined && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Investimentos</CardTitle>
+            <PiggyBank className="h-4 w-4 text-chart-3" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-chart-3">
+              R$ {totalInvestments.toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
