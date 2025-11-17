@@ -32,6 +32,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   health: "Saúde",
   education: "Educação",
   shopping: "Compras",
+  credit_card: "Cartão de Crédito",
+  meal_voucher: "Vale Refeição",
+  utilities: "Contas",
+  insurance: "Seguros",
+  subscription: "Assinaturas",
+  personal_care: "Cuidados Pessoais",
+  gifts: "Presentes",
+  travel: "Viagens",
+  clothing: "Roupas",
+  home_maintenance: "Manutenção Casa",
   other_expense: "Outros",
 };
 

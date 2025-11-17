@@ -199,6 +199,16 @@ export type Database = {
         | "education"
         | "shopping"
         | "other_expense"
+        | "credit_card"
+        | "meal_voucher"
+        | "utilities"
+        | "insurance"
+        | "subscription"
+        | "personal_care"
+        | "gifts"
+        | "travel"
+        | "clothing"
+        | "home_maintenance"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -350,6 +360,16 @@ export const Constants = {
         "education",
         "shopping",
         "other_expense",
+        "credit_card",
+        "meal_voucher",
+        "utilities",
+        "insurance",
+        "subscription",
+        "personal_care",
+        "gifts",
+        "travel",
+        "clothing",
+        "home_maintenance",
       ],
       transaction_type: ["income", "expense"],
     },

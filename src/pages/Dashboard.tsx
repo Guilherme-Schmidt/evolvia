@@ -182,6 +182,7 @@ const Dashboard = () => {
               totalIncome={totalIncome}
               totalExpense={totalExpense}
               balance={balance}
+              totalInvestments={totalCurrent}
             />
 
             <div className="grid gap-8 lg:grid-cols-2">

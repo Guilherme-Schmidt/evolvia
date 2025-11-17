@@ -28,6 +28,16 @@ const EXPENSE_CATEGORIES = [
   { value: "health", label: "Saúde" },
   { value: "education", label: "Educação" },
   { value: "shopping", label: "Compras" },
+  { value: "credit_card", label: "Cartão de Crédito" },
+  { value: "meal_voucher", label: "Vale Refeição" },
+  { value: "utilities", label: "Contas (Água, Luz, etc)" },
+  { value: "insurance", label: "Seguros" },
+  { value: "subscription", label: "Assinaturas" },
+  { value: "personal_care", label: "Cuidados Pessoais" },
+  { value: "gifts", label: "Presentes" },
+  { value: "travel", label: "Viagens" },
+  { value: "clothing", label: "Roupas" },
+  { value: "home_maintenance", label: "Manutenção Casa" },
   { value: "other_expense", label: "Outros" },
 ];
 
