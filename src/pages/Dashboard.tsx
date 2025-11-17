@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { FinancialSummary } from "@/components/FinancialSummary";
+import { FinancialGoals } from "@/components/FinancialGoals";
 import { InvestmentForm } from "@/components/InvestmentForm";
 import { InvestmentList } from "@/components/InvestmentList";
 import { InvestmentSummary } from "@/components/InvestmentSummary";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
+import { DividendsHistory } from "@/components/DividendsHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, User, DollarSign, TrendingUp } from "lucide-react";
+import { LogOut, User, DollarSign, TrendingUp, Home as HomeIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 interface Transaction {
@@ -36,11 +39,15 @@ interface Investment {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [quotes, setQuotes] = useState<{ [key: string]: { regularMarketPrice: number } }>({});
   const [loading, setLoading] = useState(true);
+  
+  const searchParams = new URLSearchParams(location.search);
+  const defaultTab = searchParams.get("tab") || "finance";
 
   const fetchTransactions = async () => {
     try {
@@ -145,7 +152,15 @@ const Dashboard = () => {
                 Controle Financeiro
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+              >
+                <HomeIcon className="h-5 w-5" />
+              </Button>
+              <ThemeToggle />
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">{user?.email}</span>
@@ -165,7 +180,7 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="finance" className="space-y-8">
+        <Tabs defaultValue={defaultTab} className="space-y-8">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
             <TabsTrigger value="finance" className="gap-2">
               <DollarSign className="h-4 w-4" />
@@ -184,6 +199,8 @@ const Dashboard = () => {
               balance={balance}
               totalInvestments={totalCurrent}
             />
+
+            <FinancialGoals />
 
             <div className="grid gap-8 lg:grid-cols-2">
               <TransactionForm onSuccess={fetchTransactions} />
@@ -207,6 +224,8 @@ const Dashboard = () => {
               investments={investments}
               quotes={quotes}
             />
+
+            <DividendsHistory investments={investments} />
 
             <InvestmentTransactions />
 
