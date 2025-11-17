@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      financial_goals: {
+        Row: {
+          category: string
+          created_at: string
+          current_amount: number
+          deadline: string | null
+          description: string | null
+          id: string
+          status: string
+          target_amount: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          target_amount: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string
+          target_amount?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investment_transactions: {
         Row: {
           created_at: string
@@ -109,6 +151,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          theme: string | null
           updated_at: string
           user_id: string
         }
@@ -117,6 +160,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          theme?: string | null
           updated_at?: string
           user_id: string
         }
@@ -125,6 +169,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          theme?: string | null
           updated_at?: string
           user_id?: string
         }
