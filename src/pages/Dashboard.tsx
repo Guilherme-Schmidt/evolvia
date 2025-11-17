@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { FinancialSummary } from "@/components/FinancialSummary";
-import { LogOut, User } from "lucide-react";
+import { InvestmentForm } from "@/components/InvestmentForm";
+import { InvestmentList } from "@/components/InvestmentList";
+import { InvestmentSummary } from "@/components/InvestmentSummary";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogOut, User, DollarSign, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 interface Transaction {
@@ -18,10 +22,21 @@ interface Transaction {
   description?: string;
 }
 
+interface Investment {
+  id: string;
+  ticker: string;
+  type: string;
+  quantity: number;
+  average_price: number;
+  purchase_date: string;
+  notes?: string;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTransactions = async () => {
@@ -40,6 +55,20 @@ const Dashboard = () => {
     }
   };
 
+  const fetchInvestments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("investments")
+        .select("*")
+        .order("purchase_date", { ascending: false });
+
+      if (error) throw error;
+      setInvestments(data || []);
+    } catch (error: any) {
+      toast.error("Erro ao carregar investimentos");
+    }
+  };
+
   useEffect(() => {
     // Check authentication
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -48,6 +77,7 @@ const Dashboard = () => {
       } else {
         setUser(user);
         fetchTransactions();
+        fetchInvestments();
       }
     });
 
@@ -77,6 +107,11 @@ const Dashboard = () => {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const balance = totalIncome - totalExpense;
+
+  const totalInvested = investments.reduce(
+    (sum, inv) => sum + Number(inv.quantity) * Number(inv.average_price),
+    0
+  );
 
   if (loading) {
     return (
@@ -119,21 +154,50 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
-          <FinancialSummary
-            totalIncome={totalIncome}
-            totalExpense={totalExpense}
-            balance={balance}
-          />
+        <Tabs defaultValue="finance" className="space-y-8">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsTrigger value="finance" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="investments" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Investimentos
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            <TransactionForm onSuccess={fetchTransactions} />
-            <TransactionList
-              transactions={transactions}
-              onDelete={fetchTransactions}
+          <TabsContent value="finance" className="space-y-8">
+            <FinancialSummary
+              totalIncome={totalIncome}
+              totalExpense={totalExpense}
+              balance={balance}
             />
-          </div>
-        </div>
+
+            <div className="grid gap-8 lg:grid-cols-2">
+              <TransactionForm onSuccess={fetchTransactions} />
+              <TransactionList
+                transactions={transactions}
+                onDelete={fetchTransactions}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="investments" className="space-y-8">
+            <InvestmentSummary
+              totalInvested={totalInvested}
+              totalCurrent={totalInvested}
+              totalAssets={investments.length}
+            />
+
+            <div className="grid gap-8 lg:grid-cols-2">
+              <InvestmentForm onSuccess={fetchInvestments} />
+              <InvestmentList
+                investments={investments}
+                onDelete={fetchInvestments}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

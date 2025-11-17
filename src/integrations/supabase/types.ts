@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      investments: {
+        Row: {
+          average_price: number
+          created_at: string
+          id: string
+          notes: string | null
+          purchase_date: string
+          quantity: number
+          ticker: string
+          type: Database["public"]["Enums"]["investment_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_price: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          purchase_date?: string
+          quantity: number
+          ticker: string
+          type: Database["public"]["Enums"]["investment_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_price?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          purchase_date?: string
+          quantity?: number
+          ticker?: string
+          type?: Database["public"]["Enums"]["investment_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -88,6 +127,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      investment_type:
+        | "stock"
+        | "fii"
+        | "etf"
+        | "bdr"
+        | "treasury"
+        | "crypto"
+        | "fixed_income"
+        | "other"
       transaction_category:
         | "salary"
         | "freelance"
@@ -229,6 +277,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      investment_type: [
+        "stock",
+        "fii",
+        "etf",
+        "bdr",
+        "treasury",
+        "crypto",
+        "fixed_income",
+        "other",
+      ],
       transaction_category: [
         "salary",
         "freelance",
