@@ -52,17 +52,39 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
 
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("investments").insert([{
-        user_id: user.id,
-        ticker: formData.ticker.toUpperCase(),
-        type: formData.type as any,
-        quantity: Number(formData.quantity),
-        average_price: Number(formData.average_price),
-        purchase_date: formData.purchase_date,
-        notes: formData.notes || null,
-      }]);
+      // Insert investment
+      const { data: investmentData, error: investmentError } = await supabase
+        .from("investments")
+        .insert([{
+          user_id: user.id,
+          ticker: formData.ticker.toUpperCase(),
+          type: formData.type as any,
+          quantity: Number(formData.quantity),
+          average_price: Number(formData.average_price),
+          purchase_date: formData.purchase_date,
+          notes: formData.notes || null,
+        }])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (investmentError) throw investmentError;
+
+      // Register transaction
+      const totalAmount = Number(formData.quantity) * Number(formData.average_price);
+      const { error: transactionError } = await supabase
+        .from("investment_transactions")
+        .insert([{
+          user_id: user.id,
+          investment_id: investmentData.id,
+          type: "buy",
+          quantity: Number(formData.quantity),
+          price: Number(formData.average_price),
+          total_amount: totalAmount,
+          transaction_date: formData.purchase_date,
+          notes: formData.notes || null,
+        }]);
+
+      if (transactionError) throw transactionError;
 
       toast.success("Investimento adicionado com sucesso!");
       setFormData({

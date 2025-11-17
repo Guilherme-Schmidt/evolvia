@@ -8,6 +8,8 @@ import { FinancialSummary } from "@/components/FinancialSummary";
 import { InvestmentForm } from "@/components/InvestmentForm";
 import { InvestmentList } from "@/components/InvestmentList";
 import { InvestmentSummary } from "@/components/InvestmentSummary";
+import { InvestmentCharts } from "@/components/InvestmentCharts";
+import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, User, DollarSign, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
@@ -37,6 +39,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [quotes, setQuotes] = useState<{ [key: string]: { regularMarketPrice: number } }>({});
   const [loading, setLoading] = useState(true);
 
   const fetchTransactions = async () => {
@@ -113,6 +116,14 @@ const Dashboard = () => {
     0
   );
 
+  const totalCurrent = investments.reduce((sum, inv) => {
+    const quote = quotes[inv.ticker];
+    const currentValue = quote
+      ? Number(inv.quantity) * quote.regularMarketPrice
+      : Number(inv.quantity) * Number(inv.average_price);
+    return sum + currentValue;
+  }, 0);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -182,20 +193,26 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="investments" className="space-y-8">
+          <TabsContent value="investments" className="space-y-4">
+            <InvestmentForm onSuccess={fetchInvestments} />
+            
             <InvestmentSummary
               totalInvested={totalInvested}
-              totalCurrent={totalInvested}
+              totalCurrent={totalCurrent}
               totalAssets={investments.length}
             />
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <InvestmentForm onSuccess={fetchInvestments} />
-              <InvestmentList
-                investments={investments}
-                onDelete={fetchInvestments}
-              />
-            </div>
+            <InvestmentCharts
+              investments={investments}
+              quotes={quotes}
+            />
+
+            <InvestmentTransactions />
+
+            <InvestmentList
+              investments={investments}
+              onDelete={fetchInvestments}
+            />
           </TabsContent>
         </Tabs>
       </main>
