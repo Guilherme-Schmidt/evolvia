@@ -61,6 +61,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [creditCardId, setCreditCardId] = useState<string>("");
   const [creditCards, setCreditCards] = useState<Array<{ id: string; name: string }>>([]);
+  const [installments, setInstallments] = useState<number>(1);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -89,18 +90,74 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
         return;
       }
 
-      const { error } = await supabase.from("transactions").insert([{
-        user_id: user.id,
-        title,
-        amount: parseFloat(amount),
-        type,
-        category: category as TransactionCategory,
-        description: description || null,
-        date,
-        credit_card_id: creditCardId || null,
-      }]);
+      const totalAmount = parseFloat(amount);
+      const installmentAmount = totalAmount / installments;
 
-      if (error) throw error;
+      // If installments > 1, create parent transaction and installment transactions
+      if (creditCardId && installments > 1) {
+        // Create parent transaction
+        const { data: parentTx, error: parentError } = await supabase
+          .from("transactions")
+          .insert([{
+            user_id: user.id,
+            title: `${title} (Parcelado ${installments}x)`,
+            amount: totalAmount,
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date,
+            credit_card_id: creditCardId,
+            installments,
+            current_installment: 0, // Parent transaction marker
+          }])
+          .select()
+          .single();
+
+        if (parentError) throw parentError;
+
+        // Create installment transactions
+        const installmentTransactions = [];
+        const baseDate = new Date(date);
+        
+        for (let i = 1; i <= installments; i++) {
+          const installmentDate = new Date(baseDate);
+          installmentDate.setMonth(installmentDate.getMonth() + (i - 1));
+          
+          installmentTransactions.push({
+            user_id: user.id,
+            title: `${title} (${i}/${installments})`,
+            amount: installmentAmount,
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date: installmentDate.toISOString().split('T')[0],
+            credit_card_id: creditCardId,
+            installments,
+            current_installment: i,
+            parent_transaction_id: parentTx.id,
+          });
+        }
+
+        const { error: installmentsError } = await supabase
+          .from("transactions")
+          .insert(installmentTransactions);
+
+        if (installmentsError) throw installmentsError;
+      } else {
+        // Regular transaction without installments
+        const { error: insertError } = await supabase.from("transactions").insert([{
+          user_id: user.id,
+          title,
+          amount: totalAmount,
+          type,
+          category: category as TransactionCategory,
+          description: description || null,
+          date,
+          credit_card_id: creditCardId || null,
+        }]);
+
+        if (insertError) throw insertError;
+      }
 
       toast.success("Transação adicionada com sucesso!");
       
@@ -111,6 +168,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
       setCreditCardId("");
+      setInstallments(1);
       
       onSuccess?.();
     } catch (error: any) {
@@ -208,21 +266,44 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
           </div>
 
           {type === "expense" && creditCards.length > 0 && (
-            <div className="space-y-2">
-              <Label>Cartão de Crédito (opcional)</Label>
-              <Select value={creditCardId || undefined} onValueChange={(value) => setCreditCardId(value || "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cartão (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {creditCards.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label>Cartão de Crédito (opcional)</Label>
+                <Select value={creditCardId || undefined} onValueChange={(value) => setCreditCardId(value || "")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cartão (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {creditCards.map((card) => (
+                      <SelectItem key={card.id} value={card.id}>
+                        {card.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {creditCardId && (
+                <div className="space-y-2">
+                  <Label htmlFor="installments">Número de Parcelas</Label>
+                  <Select 
+                    value={installments.toString()} 
+                    onValueChange={(value) => setInstallments(parseInt(value))}
+                  >
+                    <SelectTrigger id="installments">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num}x {num > 1 && `de R$ ${(parseFloat(amount || "0") / num).toFixed(2)}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
           )}
 
           <div className="space-y-2">

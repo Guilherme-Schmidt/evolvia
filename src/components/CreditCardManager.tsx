@@ -29,6 +29,7 @@ interface Transaction {
   type: string;
   credit_card_id: string | null;
   date: string;
+  current_installment?: number;
 }
 
 export const CreditCardManager = () => {
@@ -142,6 +143,8 @@ export const CreditCardManager = () => {
     return transactions
       .filter((t) => {
         if (t.credit_card_id !== cardId) return false;
+        // Skip parent transactions (current_installment = 0)
+        if (t.current_installment === 0) return false;
         const transactionDate = new Date(t.date);
         return (
           transactionDate.getMonth() === currentMonth &&
