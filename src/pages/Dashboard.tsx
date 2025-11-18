@@ -12,8 +12,11 @@ import { InvestmentSummary } from "@/components/InvestmentSummary";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { DividendsHistory } from "@/components/DividendsHistory";
+import { BudgetManager } from "@/components/BudgetManager";
+import { CreditCardManager } from "@/components/CreditCardManager";
+import { CreditCardCharts } from "@/components/CreditCardCharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, User, DollarSign, TrendingUp, Home as HomeIcon } from "lucide-react";
+import { LogOut, User, DollarSign, TrendingUp, Home as HomeIcon, CreditCard } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
@@ -200,10 +203,14 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue={defaultTab} className="space-y-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3">
             <TabsTrigger value="finance" className="gap-2">
               <DollarSign className="h-4 w-4" />
               Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="cards" className="gap-2">
+              <CreditCard className="h-4 w-4" />
+              Cartões
             </TabsTrigger>
             <TabsTrigger value="investments" className="gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -221,6 +228,8 @@ const Dashboard = () => {
 
             <FinancialGoals />
 
+            <BudgetManager />
+
             <div className="grid gap-8 lg:grid-cols-2">
               <TransactionForm onSuccess={fetchTransactions} />
               <TransactionList
@@ -228,6 +237,11 @@ const Dashboard = () => {
                 onDelete={fetchTransactions}
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="cards" className="space-y-8">
+            <CreditCardManager />
+            <CreditCardCharts />
           </TabsContent>
 
           <TabsContent value="investments" className="space-y-4">

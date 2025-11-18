@@ -87,7 +87,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       if (error) throw error;
 
       toast.success("Transação adicionada com sucesso!");
-      
+
       // Reset form
       setTitle("");
       setAmount("");
