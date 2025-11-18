@@ -256,9 +256,12 @@ export type Database = {
           category: Database["public"]["Enums"]["transaction_category"]
           created_at: string
           credit_card_id: string | null
+          current_installment: number | null
           date: string
           description: string | null
           id: string
+          installments: number | null
+          parent_transaction_id: string | null
           title: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -269,9 +272,12 @@ export type Database = {
           category: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
           credit_card_id?: string | null
+          current_installment?: number | null
           date?: string
           description?: string | null
           id?: string
+          installments?: number | null
+          parent_transaction_id?: string | null
           title: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -282,9 +288,12 @@ export type Database = {
           category?: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
           credit_card_id?: string | null
+          current_installment?: number | null
           date?: string
           description?: string | null
           id?: string
+          installments?: number | null
+          parent_transaction_id?: string | null
           title?: string
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -296,6 +305,13 @@ export type Database = {
             columns: ["credit_card_id"]
             isOneToOne: false
             referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
