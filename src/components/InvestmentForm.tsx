@@ -39,6 +39,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
     average_price: "",
     purchase_date: new Date().toISOString().split("T")[0],
     notes: "",
+    broker: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,6 +64,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           average_price: Number(formData.average_price),
           purchase_date: formData.purchase_date,
           notes: formData.notes || null,
+          broker: formData.broker || null,
         }])
         .select()
         .single();
@@ -94,6 +96,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
         average_price: "",
         purchase_date: new Date().toISOString().split("T")[0],
         notes: "",
+        broker: "",
       });
       onSuccess();
     } catch (error: any) {
@@ -189,6 +192,18 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                   setFormData({ ...formData, purchase_date: e.target.value })
                 }
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="broker">Corretora</Label>
+              <Input
+                id="broker"
+                value={formData.broker}
+                onChange={(e) =>
+                  setFormData({ ...formData, broker: e.target.value })
+                }
+                placeholder="Ex: Clear, XP, Rico"
               />
             </div>
           </div>

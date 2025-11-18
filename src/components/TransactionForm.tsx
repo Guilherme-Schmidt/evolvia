@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
@@ -59,8 +59,18 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [category, setCategory] = useState<TransactionCategory | "">("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [creditCardId, setCreditCardId] = useState<string>("");
+  const [creditCards, setCreditCards] = useState<Array<{ id: string; name: string }>>([]);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  useEffect(() => {
+    const fetchCreditCards = async () => {
+      const { data } = await supabase.from('credit_cards').select('id, name').order('name');
+      if (data) setCreditCards(data);
+    };
+    fetchCreditCards();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +97,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
         category: category as TransactionCategory,
         description: description || null,
         date,
+        credit_card_id: creditCardId || null,
       }]);
 
       if (error) throw error;
@@ -99,6 +110,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       setCategory("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
+      setCreditCardId("");
       
       onSuccess?.();
     } catch (error: any) {
@@ -194,6 +206,25 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
               </Select>
             </div>
           </div>
+
+          {type === "expense" && creditCards.length > 0 && (
+            <div className="space-y-2">
+              <Label>Cartão de Crédito (opcional)</Label>
+              <Select value={creditCardId} onValueChange={setCreditCardId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {creditCards.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição (opcional)</Label>
