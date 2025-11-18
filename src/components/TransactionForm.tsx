@@ -210,12 +210,11 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
           {type === "expense" && creditCards.length > 0 && (
             <div className="space-y-2">
               <Label>Cartão de Crédito (opcional)</Label>
-              <Select value={creditCardId} onValueChange={setCreditCardId}>
+              <Select value={creditCardId || undefined} onValueChange={(value) => setCreditCardId(value || "")}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Nenhum" />
+                  <SelectValue placeholder="Selecione um cartão (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
                   {creditCards.map((card) => (
                     <SelectItem key={card.id} value={card.id}>
                       {card.name}
