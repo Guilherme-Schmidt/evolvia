@@ -58,14 +58,14 @@ const Home = () => {
       bgColor: "bg-chart-1/10",
       path: "/dashboard",
     },
-    {
+    /* {
       title: "Investimentos",
       description: "Acompanhe sua carteira de investimentos",
       icon: TrendingUp,
       color: "text-chart-2",
       bgColor: "bg-chart-2/10",
       path: "/dashboard?tab=investments",
-    },
+    }, */
     {
       title: "Academia",
       description: "Controle seus treinos e evolução",
@@ -111,7 +111,7 @@ const Home = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Tudo em Um
+                EVOLVIA
               </h1>
               <p className="text-sm text-muted-foreground">
                 Sua plataforma completa
