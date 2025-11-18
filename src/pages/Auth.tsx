@@ -10,14 +10,14 @@ const Auth = () => {
     // Check if user is already logged in
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        navigate("/dashboard");
+        navigate("/home");
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/dashboard");
+        navigate("/home");
       }
     });
 
