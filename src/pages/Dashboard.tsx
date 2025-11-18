@@ -41,6 +41,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [quotes, setQuotes] = useState<{ [key: string]: { regularMarketPrice: number } }>({});
@@ -79,6 +80,22 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", userId)
+        .single();
+      
+      if (profile?.full_name) {
+        setUserName(profile.full_name);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar perfil:", error);
+    }
+  };
+
   useEffect(() => {
     // Check authentication
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -86,6 +103,7 @@ const Dashboard = () => {
         navigate("/auth");
       } else {
         setUser(user);
+        fetchUserProfile(user.id);
         fetchTransactions();
         fetchInvestments();
       }
@@ -97,6 +115,7 @@ const Dashboard = () => {
         navigate("/auth");
       } else {
         setUser(session.user);
+        fetchUserProfile(session.user.id);
       }
     });
 
@@ -146,7 +165,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Tudo em Um
+                Bem-vindo{userName ? `, ${userName}` : ""}!
               </h1>
               <p className="text-sm text-muted-foreground">
                 Controle Financeiro
