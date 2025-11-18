@@ -12,6 +12,7 @@ import { InvestmentSummary } from "@/components/InvestmentSummary";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { DividendsHistory } from "@/components/DividendsHistory";
+import { BudgetManager } from "@/components/BudgetManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, User, DollarSign, TrendingUp, Home as HomeIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -220,6 +221,8 @@ const Dashboard = () => {
             />
 
             <FinancialGoals />
+
+            <BudgetManager />
 
             <div className="grid gap-8 lg:grid-cols-2">
               <TransactionForm onSuccess={fetchTransactions} />
