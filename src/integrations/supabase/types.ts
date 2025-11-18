@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      budgets: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string
+          id: string
+          month: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          month: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          month?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       financial_goals: {
         Row: {
           category: string
@@ -260,6 +293,12 @@ export type Database = {
         | "travel"
         | "clothing"
         | "home_maintenance"
+        | "fuel"
+        | "groceries"
+        | "school"
+        | "leisure"
+        | "internet"
+        | "phone"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -421,6 +460,12 @@ export const Constants = {
         "travel",
         "clothing",
         "home_maintenance",
+        "fuel",
+        "groceries",
+        "school",
+        "leisure",
+        "internet",
+        "phone",
       ],
       transaction_type: ["income", "expense"],
     },
