@@ -18,15 +18,30 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const Home = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
       } else {
         setUser(user);
+        
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (profile?.full_name) {
+          setUserName(profile.full_name);
+        }
       }
-    });
+    };
+    
+    loadUser();
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -125,7 +140,7 @@ const Home = () => {
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold">Bem-vindo!</h2>
+            <h2 className="text-3xl font-bold">Bem-vindo{userName ? `, ${userName}` : ""}!</h2>
             <p className="text-muted-foreground">
               Escolha um módulo para começar
             </p>
