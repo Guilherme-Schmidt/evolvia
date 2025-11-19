@@ -20,11 +20,22 @@ serve(async (req) => {
 
     console.log(`Fetching quote for ticker: ${ticker}`);
 
-    // Using Brapi - Free API for Brazilian stocks
-    const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=demo`);
+    // Using Brapi - Free API for Brazilian stocks with token
+    const apiUrl = `https://brapi.dev/api/quote/${ticker}?token=demo`;
+    console.log('API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    console.log('Response status:', response.status);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch quote: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`Failed to fetch quote: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

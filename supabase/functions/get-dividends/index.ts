@@ -20,18 +20,22 @@ serve(async (req) => {
       );
     }
 
-    // Buscar dados de dividendos da Brapi
-    const response = await fetch(
-      `https://brapi.dev/api/quote/${ticker}?range=2y&interval=1d&dividends=true&token=demo`,
-      {
-        headers: {
-          "Accept": "application/json",
-        },
-      }
-    );
+    // Buscar dados de dividendos da Brapi com token
+    const apiUrl = `https://brapi.dev/api/quote/${ticker}?range=2y&interval=1d&dividends=true&token=demo`;
+    console.log('Fetching dividends from:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    console.log('Response status:', response.status);
 
     if (!response.ok) {
-      throw new Error(`Erro ao buscar dados: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`Erro ao buscar dados: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
