@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,11 @@ interface TransactionFormProps {
   onSuccess?: () => void;
 }
 
+interface CreditCard {
+  id: string;
+  name: string;
+}
+
 export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<TransactionType>("expense");
@@ -54,8 +59,25 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [category, setCategory] = useState<TransactionCategory | "">("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [selectedCard, setSelectedCard] = useState<string>("");
+  const [installments, setInstallments] = useState<number>(1);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  useEffect(() => {
+    if (type === "expense") {
+      fetchCreditCards();
+    }
+  }, [type]);
+
+  const fetchCreditCards = async () => {
+    const { data } = await supabase
+      .from("credit_cards")
+      .select("id, name")
+      .order("name");
+    setCreditCards(data || []);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,17 +96,72 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
         return;
       }
 
-      const { error } = await supabase.from("transactions").insert([{
-        user_id: user.id,
-        title,
-        amount: parseFloat(amount),
-        type,
-        category: category as TransactionCategory,
-        description: description || null,
-        date,
-      }]);
+      // Se tem cartão selecionado e mais de 1 parcela, cria transações parceladas
+      if (selectedCard && installments > 1) {
+        // Criar transação pai
+        const { data: parentTransaction, error: parentError } = await supabase
+          .from("transactions")
+          .insert([{
+            user_id: user.id,
+            title,
+            amount: parseFloat(amount),
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date,
+            credit_card_id: selectedCard,
+            installments,
+            current_installment: 0,
+            parent_transaction_id: null,
+          }])
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (parentError) throw parentError;
+
+        // Criar parcelas individuais
+        const installmentAmount = parseFloat(amount) / installments;
+        const installmentTransactions = [];
+        
+        for (let i = 1; i <= installments; i++) {
+          const installmentDate = new Date(date);
+          installmentDate.setMonth(installmentDate.getMonth() + (i - 1));
+          
+          installmentTransactions.push({
+            user_id: user.id,
+            title: `${title} (${i}/${installments})`,
+            amount: installmentAmount,
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date: installmentDate.toISOString().split("T")[0],
+            credit_card_id: selectedCard,
+            installments,
+            current_installment: i,
+            parent_transaction_id: parentTransaction.id,
+          });
+        }
+
+        const { error: installmentsError } = await supabase
+          .from("transactions")
+          .insert(installmentTransactions);
+
+        if (installmentsError) throw installmentsError;
+      } else {
+        // Transação única
+        const { error } = await supabase.from("transactions").insert([{
+          user_id: user.id,
+          title,
+          amount: parseFloat(amount),
+          type,
+          category: category as TransactionCategory,
+          description: description || null,
+          date,
+          credit_card_id: selectedCard || null,
+        }]);
+
+        if (error) throw error;
+      }
 
       toast.success("Transação adicionada com sucesso!");
 
@@ -94,6 +171,8 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       setCategory("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
+      setSelectedCard("");
+      setInstallments(1);
       
       onSuccess?.();
     } catch (error: any) {
@@ -189,6 +268,48 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
               </Select>
             </div>
           </div>
+
+          {type === "expense" && (
+            <>
+              <div className="space-y-2">
+                <Label>Cartão de Crédito (opcional)</Label>
+                <Select value={selectedCard} onValueChange={setSelectedCard}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cartão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {creditCards.map((card) => (
+                      <SelectItem key={card.id} value={card.id}>
+                        {card.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedCard && selectedCard !== "none" && (
+                <div className="space-y-2">
+                  <Label htmlFor="installments">Número de Parcelas</Label>
+                  <Select
+                    value={installments.toString()}
+                    onValueChange={(v) => setInstallments(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num}x de R$ {(parseFloat(amount || "0") / num).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição (opcional)</Label>
