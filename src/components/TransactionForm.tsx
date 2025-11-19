@@ -278,7 +278,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                     <SelectValue placeholder="Selecione um cartão" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
+                    <SelectItem value="">Nenhum</SelectItem>
                     {creditCards.map((card) => (
                       <SelectItem key={card.id} value={card.id}>
                         {card.name}
@@ -288,7 +288,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                 </Select>
               </div>
 
-              {selectedCard && selectedCard !== "none" && (
+              {selectedCard && (
                 <div className="space-y-2">
                   <Label htmlFor="installments">Número de Parcelas</Label>
                   <Select
