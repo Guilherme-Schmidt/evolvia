@@ -181,6 +181,7 @@ export type Database = {
           notes: string | null
           purchase_date: string
           quantity: number
+          target_quantity: number | null
           ticker: string
           type: Database["public"]["Enums"]["investment_type"]
           updated_at: string
@@ -194,6 +195,7 @@ export type Database = {
           notes?: string | null
           purchase_date?: string
           quantity: number
+          target_quantity?: number | null
           ticker: string
           type: Database["public"]["Enums"]["investment_type"]
           updated_at?: string
@@ -207,6 +209,7 @@ export type Database = {
           notes?: string | null
           purchase_date?: string
           quantity?: number
+          target_quantity?: number | null
           ticker?: string
           type?: Database["public"]["Enums"]["investment_type"]
           updated_at?: string
