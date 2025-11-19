@@ -60,7 +60,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
-  const [selectedCard, setSelectedCard] = useState<string>("");
+  const [selectedCard, setSelectedCard] = useState<string>("none");
   const [installments, setInstallments] = useState<number>(1);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -97,7 +97,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       }
 
       // Se tem cartão selecionado e mais de 1 parcela, cria transações parceladas
-      if (selectedCard && installments > 1) {
+      if (selectedCard && selectedCard !== "none" && installments > 1) {
         // Criar transação pai
         const { data: parentTransaction, error: parentError } = await supabase
           .from("transactions")
@@ -157,7 +157,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
           category: category as TransactionCategory,
           description: description || null,
           date,
-          credit_card_id: selectedCard || null,
+          credit_card_id: selectedCard && selectedCard !== "none" ? selectedCard : null,
         }]);
 
         if (error) throw error;
@@ -171,7 +171,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       setCategory("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
-      setSelectedCard("");
+      setSelectedCard("none");
       setInstallments(1);
       
       onSuccess?.();
@@ -278,7 +278,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                     <SelectValue placeholder="Selecione um cartão" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {creditCards.map((card) => (
                       <SelectItem key={card.id} value={card.id}>
                         {card.name}
@@ -288,7 +288,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                 </Select>
               </div>
 
-              {selectedCard && (
+              {selectedCard && selectedCard !== "none" && (
                 <div className="space-y-2">
                   <Label htmlFor="installments">Número de Parcelas</Label>
                   <Select
