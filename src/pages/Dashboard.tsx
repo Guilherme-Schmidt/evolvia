@@ -12,6 +12,7 @@ import { InvestmentSummary } from "@/components/InvestmentSummary";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { DividendsHistory } from "@/components/DividendsHistory";
+import { InvestmentDashboard } from "@/components/InvestmentDashboard";
 import { BudgetManager } from "@/components/BudgetManager";
 import { CreditCardManager } from "@/components/CreditCardManager";
 import { CreditCardCharts } from "@/components/CreditCardCharts";
@@ -246,6 +247,8 @@ const Dashboard = () => {
 
           <TabsContent value="investments" className="space-y-4">
             <InvestmentForm onSuccess={fetchInvestments} />
+            
+            <InvestmentDashboard />
             
             <InvestmentSummary
               totalInvested={totalInvested}

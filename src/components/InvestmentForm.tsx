@@ -37,6 +37,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
     type: "",
     quantity: "",
     average_price: "",
+    target_quantity: "",
     purchase_date: new Date().toISOString().split("T")[0],
     notes: "",
     broker: "",
@@ -62,6 +63,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           type: formData.type as any,
           quantity: Number(formData.quantity),
           average_price: Number(formData.average_price),
+          target_quantity: formData.target_quantity ? Number(formData.target_quantity) : 0,
           purchase_date: formData.purchase_date,
           notes: formData.notes || null,
           broker: formData.broker || null,
@@ -94,6 +96,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
         type: "",
         quantity: "",
         average_price: "",
+        target_quantity: "",
         purchase_date: new Date().toISOString().split("T")[0],
         notes: "",
         broker: "",
@@ -179,6 +182,20 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 }
                 placeholder="Ex: 25.50"
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="target_quantity">Meta de Quantidade</Label>
+              <Input
+                id="target_quantity"
+                type="number"
+                step="0.01"
+                value={formData.target_quantity}
+                onChange={(e) =>
+                  setFormData({ ...formData, target_quantity: e.target.value })
+                }
+                placeholder="Ex: 200 (opcional)"
               />
             </div>
 
