@@ -91,104 +91,137 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     return { profit, profitPercent };
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Minha Carteira</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {investments.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            Nenhum investimento cadastrado ainda.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {investments.map((investment) => {
-              const quote = quotes[investment.ticker];
-              const profitData = quote
-                ? calculateProfit(investment, quote.regularMarketPrice)
-                : null;
+  // Agrupar investimentos por tipo
+  const stocks = investments.filter((inv) => inv.type === "stock");
+  const fiis = investments.filter((inv) => inv.type === "fii");
 
-              return (
-                <div
-                  key={investment.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
-                >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-lg">{investment.ticker}</span>
-                      <Badge variant="secondary">
-                        {typeLabels[investment.type]}
-                      </Badge>
-                      {quote && (
-                        <Badge
-                          variant={
-                            quote.regularMarketChange >= 0 ? "default" : "destructive"
-                          }
-                        >
-                          {quote.regularMarketChange >= 0 ? "+" : ""}
-                          {quote.regularMarketChangePercent.toFixed(2)}%
-                        </Badge>
-                      )}
-                    </div>
+  const renderInvestmentCard = (investment: Investment) => {
+    const quote = quotes[investment.ticker];
+    const profitData = quote
+      ? calculateProfit(investment, quote.regularMarketPrice)
+      : null;
 
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>
-                        Quantidade: {investment.quantity} | Preço médio: R${" "}
-                        {investment.average_price.toFixed(2)}
-                      </p>
-                      {quote && (
-                        <>
-                          <p className="font-semibold">
-                            Cotação atual: R$ {quote.regularMarketPrice.toFixed(2)}
-                          </p>
-                          {profitData && (
-                            <p
-                              className={
-                                profitData.profit >= 0
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }
-                            >
-                              Resultado: R$ {profitData.profit.toFixed(2)} (
-                              {profitData.profitPercent.toFixed(2)}%)
-                            </p>
-                          )}
-                        </>
-                      )}
-                      {investment.notes && (
-                        <p className="text-xs italic">{investment.notes}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => fetchQuote(investment.ticker)}
-                      disabled={loading[investment.ticker]}
-                    >
-                      <RefreshCw
-                        className={`h-4 w-4 ${
-                          loading[investment.ticker] ? "animate-spin" : ""
-                        }`}
-                      />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(investment.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+    return (
+      <div
+        key={investment.id}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
+      >
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-lg">{investment.ticker}</span>
+            <Badge variant="secondary">
+              {typeLabels[investment.type]}
+            </Badge>
+            {quote && (
+              <Badge
+                variant={
+                  quote.regularMarketChange >= 0 ? "default" : "destructive"
+                }
+              >
+                {quote.regularMarketChange >= 0 ? "+" : ""}
+                {quote.regularMarketChangePercent.toFixed(2)}%
+              </Badge>
+            )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>
+              Quantidade: {investment.quantity} | Preço médio: R${" "}
+              {investment.average_price.toFixed(2)}
+            </p>
+            {quote && (
+              <>
+                <p className="font-semibold">
+                  Cotação atual: R$ {quote.regularMarketPrice.toFixed(2)}
+                </p>
+                {profitData && (
+                  <p
+                    className={
+                      profitData.profit >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    Resultado: R$ {profitData.profit.toFixed(2)} (
+                    {profitData.profitPercent.toFixed(2)}%)
+                  </p>
+                )}
+              </>
+            )}
+            {investment.notes && (
+              <p className="text-xs italic">{investment.notes}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => fetchQuote(investment.ticker)}
+            disabled={loading[investment.ticker]}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${
+                loading[investment.ticker] ? "animate-spin" : ""
+              }`}
+            />
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => handleDelete(investment.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Card de Ações */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Ações
+            <Badge variant="outline">{stocks.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stocks.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              Nenhuma ação cadastrada ainda.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {stocks.map((investment) => renderInvestmentCard(investment))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Card de FIIs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Fundos Imobiliários
+            <Badge variant="outline">{fiis.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {fiis.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              Nenhum FII cadastrado ainda.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {fiis.map((investment) => renderInvestmentCard(investment))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
