@@ -15,7 +15,13 @@ serve(async (req) => {
     const { ticker } = await req.json();
     
     if (!ticker) {
-      throw new Error('Ticker is required');
+      return new Response(
+        JSON.stringify({ error: 'Ticker is required' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
     }
 
     console.log(`Fetching quote for ticker: ${ticker}`);
@@ -35,7 +41,20 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API Error:', errorText);
-      throw new Error(`Failed to fetch quote: ${response.status} - ${errorText}`);
+
+      // Return a graceful error response instead of throwing,
+      // so the frontend and preview don't break with a 400.
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch quote from external API',
+          status: response.status,
+          details: errorText,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      );
     }
 
     const data = await response.json();
@@ -54,10 +73,10 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: message, internalError: true }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200,
       },
     );
   }
