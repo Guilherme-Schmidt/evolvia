@@ -1,1 +1,4 @@
 project_id = "zepbljtkpfvaxhbyiybk"
+
+[functions.process-whatsapp-transaction]
+verify_jwt = false
