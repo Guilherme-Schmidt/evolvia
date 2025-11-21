@@ -11,6 +11,21 @@
 
 ---
 
+# ESCOLHA SUA OPÇÃO
+
+## 🟢 Opção 1: Direto (Recomendado - Mais Simples)
+Webhook → Edge Function → WhatsApp
+**Tempo: 10 minutos**
+
+## 🔵 Opção 2: Com n8n Gratuito (Mais Flexível)
+Webhook → n8n → Edge Function → WhatsApp
+**Tempo: 20 minutos**
+**Vantagens**: Interface visual, integrações fáceis, logs detalhados
+
+---
+
+# 🟢 OPÇÃO 1: SETUP DIRETO
+
 ## 📱 Passo 1: Deploy da Evolution API
 
 ### Opção A: Railway (Recomendado - Mais Fácil)
@@ -82,41 +97,12 @@ curl -X POST https://seu-app.up.railway.app/instance/create \
 
 **⚠️ IMPORTANTE:** Substitua `SEU_USER_ID_AQUI` pelo seu User ID (veja Passo 3)!
 
-**Via Postman/Insomnia:**
-- Method: POST
-- URL: `https://seu-app.up.railway.app/instance/create`
-- Header: `apikey: minhaChaveSecreta123`
-- Body (JSON):
-```json
-{
-  "instanceName": "financeiro",
-  "webhook": {
-    "url": "https://sdjbjcufuiziclxvtcrl.supabase.co/functions/v1/whatsapp-evolution-webhook",
-    "enabled": true,
-    "events": ["messages.upsert"],
-    "webhookByEvents": false,
-    "webhookBase64": false,
-    "headers": {
-      "x-user-id": "SEU_USER_ID_AQUI"
-    }
-  },
-  "qrcode": true
-}
-```
-
-**⚠️ IMPORTANTE:** Substitua `SEU_USER_ID_AQUI` pelo seu User ID!
-
 ### 2.2 Obter QR Code
 
 **Método 1: Via Browser (Mais Fácil)**
 - Acesse: `https://seu-app.up.railway.app/instance/connect/financeiro`
 - O QR Code aparecerá na tela
 - Escaneie com seu WhatsApp
-
-**Método 2: Via API**
-```bash
-curl https://seu-app.up.railway.app/instance/qrcode/financeiro?apikey=minhaChaveSecreta123
-```
 
 ### 2.3 Escanear com WhatsApp
 
@@ -142,25 +128,164 @@ Copie o ID que aparecer.
 
 ## ✅ Passo 4: Testar
 
-### Enviar Mensagem de Teste
-
-Envie uma mensagem para o seu próprio WhatsApp:
-
+Envie mensagens:
 ```
 Gastei 150 reais no supermercado hoje
-```
-
-Ou:
-
-```
-Comprei um celular de 3000 em 12x no Nubank
+Comprei notebook de 3000 em 10x no Nubank
+Recebi 5000 de salário
 ```
 
 A transação será registrada automaticamente! 🎉
 
 ---
 
-## 💬 Exemplos de Mensagens
+# 🔵 OPÇÃO 2: COM N8N GRATUITO
+
+Use esta opção para ter controle visual do fluxo e facilitar integrações futuras.
+
+## 🛠️ Passo 1: Instalar n8n (Escolha uma)
+
+### Opção A: n8n Cloud (Gratuito - 5,000 execuções/mês)
+1. Acesse [n8n.io](https://n8n.io) e crie conta gratuita
+2. Clique em "Create new workflow"
+3. Já vem configurado e pronto!
+
+### Opção B: Self-Hosted Docker (Gratuito Ilimitado)
+```bash
+docker run -it --rm \
+  --name n8n \
+  -p 5678:5678 \
+  -v ~/.n8n:/home/node/.n8n \
+  n8nio/n8n
+```
+
+Acesse: `http://localhost:5678`
+
+---
+
+## 📊 Passo 2: Criar Workflow no n8n
+
+### 2.1 Adicionar Webhook Node (Gatilho)
+1. No canvas, adicione um **Webhook** node
+2. Configurações:
+   - **HTTP Method**: POST
+   - **Path**: `whatsapp` (ou qualquer nome)
+3. **Copie a Webhook URL** gerada
+   - Ex: `https://sua-instancia.app.n8n.cloud/webhook/whatsapp`
+
+### 2.2 Adicionar HTTP Request (Processar com AI)
+1. Adicione um **HTTP Request** node
+2. Conecte ao Webhook
+3. Configurações:
+   - **Method**: POST
+   - **URL**: `https://sdjbjcufuiziclxvtcrl.supabase.co/functions/v1/whatsapp-evolution-webhook`
+   - **Send Headers**: ON
+   - Headers:
+     - `Content-Type`: `application/json`
+     - `x-user-id`: `SEU_USER_ID_AQUI` ⚠️ **Substitua!**
+   - **Send Body**: ON
+   - Body: `{{ JSON.stringify($json) }}`
+
+### 2.3 Adicionar HTTP Request (Responder WhatsApp)
+1. Adicione outro **HTTP Request** node
+2. Conecte ao node anterior
+3. Configurações:
+   - **Method**: POST
+   - **URL**: `https://sua-evolution-api.com/message/sendText/financeiro`
+   - **Send Headers**: ON
+   - Headers:
+     - `Content-Type`: `application/json`
+     - `apikey`: `minhaChaveSecreta123` ⚠️ **Use sua key!**
+   - **Send Body**: ON
+   - Body:
+   ```json
+   {
+     "number": "{{ $('Webhook').item.json.data.key.remoteJid }}",
+     "text": "{{ $('HTTP Request').item.json.message }}"
+   }
+   ```
+
+### 2.4 Ativar Workflow
+- Clique no toggle **Active** no canto superior direito
+- Status deve ficar verde: **Active**
+
+---
+
+## 📱 Passo 3: Deploy Evolution API + Conectar
+
+Siga os **Passos 1-3 da Opção 1**, mas com UMA diferença:
+
+**Ao criar a instância** (passo 2.1), use a URL do n8n:
+
+```bash
+curl -X POST https://seu-app.up.railway.app/instance/create \
+-H "apikey: minhaChaveSecreta123" \
+-H "Content-Type: application/json" \
+-d '{
+  "instanceName": "financeiro",
+  "webhook": {
+    "url": "https://sua-instancia.app.n8n.cloud/webhook/whatsapp",
+    "enabled": true,
+    "events": ["messages.upsert"],
+    "webhookByEvents": false,
+    "webhookBase64": false
+  },
+  "qrcode": true
+}'
+```
+
+⚠️ **ATENÇÃO**: 
+- URL do webhook agora é do n8n
+- **NÃO** adicione o `x-user-id` nos headers aqui (já está no workflow do n8n)
+
+Continue com o resto dos passos da Opção 1.
+
+---
+
+## ✅ Passo 4: Testar
+
+Envie uma mensagem no WhatsApp:
+```
+Gastei 200 reais de mercado
+```
+
+**No n8n**, você verá:
+1. Webhook recebeu a mensagem ✅
+2. HTTP Request processou com AI ✅
+3. HTTP Request enviou resposta ✅
+
+Veja tudo no histórico de execuções! 📊
+
+---
+
+## 🎁 Vantagens do n8n
+
+✅ **Interface visual** - veja o fluxo em tempo real
+✅ **Logs detalhados** - debug fácil
+✅ **Integrações prontas** - Google Sheets, Notion, Slack, etc
+✅ **Lógica condicional** - adicione regras visuais
+✅ **Testes fáceis** - execute manualmente
+✅ **Versão gratuita generosa** - 5,000 exec/mês
+✅ **Self-hosted = ilimitado** - totalmente grátis
+
+---
+
+## 🔄 Exemplos de Extensões (Fáceis no n8n)
+
+### Salvar no Google Sheets
+Adicione um node **Google Sheets** após o HTTP Request
+
+### Enviar notificação no Slack
+Adicione um node **Slack** para avisar a equipe
+
+### Filtrar por valor
+Adicione um node **IF** antes de processar:
+- Se valor > R$ 1000 → enviar alerta
+- Senão → processar normal
+
+---
+
+# 💬 EXEMPLOS DE MENSAGENS (Ambas Opções)
 
 ### ✅ Despesas Simples
 - "Gastei 50 reais de uber"
@@ -185,66 +310,38 @@ A transação será registrada automaticamente! 🎉
 
 ---
 
-## 📊 Verificar Status da Conexão
+# 💰 COMPARAÇÃO DE CUSTOS
 
+## Opção 1: Direto
+| Item | Custo |
+|------|-------|
+| Evolution API (Railway) | R$ 0,00 ✅ |
+| Lovable AI | Incluído ✅ |
+| **TOTAL** | **R$ 0,00/mês** 🎉 |
+
+## Opção 2: Com n8n
+| Item | Custo |
+|------|-------|
+| Evolution API (Railway) | R$ 0,00 ✅ |
+| n8n Cloud | R$ 0,00* ✅ |
+| Lovable AI | Incluído ✅ |
+| **TOTAL** | **R$ 0,00/mês** 🎉 |
+
+*5,000 execuções/mês grátis (ou ilimitado self-hosted)
+
+---
+
+# 🐛 TROUBLESHOOTING
+
+## Mensagens não chegam
+
+### Opção 1 (Direto):
+1. Verifique conexão WhatsApp:
 ```bash
 curl https://seu-app.up.railway.app/instance/connectionState/financeiro?apikey=minhaChaveSecreta123
 ```
 
-**Resposta esperada:**
-```json
-{
-  "instance": "financeiro",
-  "state": "open"
-}
-```
-
----
-
-## 💰 Custos
-
-| Item | Custo |
-|------|-------|
-| Evolution API (Railway) | **R$ 0,00** (500h/mês grátis) ✅ |
-| WhatsApp | **R$ 0,00** (usa seu pessoal) ✅ |
-| Lovable AI | **Incluído no projeto** ✅ |
-| **TOTAL** | **R$ 0,00/mês** 🎉 |
-
-**Limites Railway Free:**
-- 500 horas/mês (suficiente para uso normal)
-- Se acabar: deploy na Render (também grátis)
-- Ou self-host (grátis ilimitado)
-
----
-
-## 🔒 Segurança
-
-### ⚠️ IMPORTANTE
-
-1. **API Key**: Guarde `minhaChaveSecreta123` em segredo
-2. **User ID**: Não compartilhe
-3. **Webhook URL**: Já está pública (precisa ser para receber webhooks)
-
-### 🛡️ Melhorias Futuras
-
-- Validar assinatura do webhook
-- Adicionar autenticação por telefone
-- Rate limiting por número
-
----
-
-## 🐛 Troubleshooting
-
-### QR Code não aparece
-```bash
-# Verificar se a API está online
-curl https://seu-app.up.railway.app/instance/fetchInstances?apikey=minhaChaveSecreta123
-```
-
-### Mensagens não chegam
-1. Verifique o estado da conexão (comando acima)
-2. Veja os logs no Railway/Render
-3. Teste o webhook manualmente:
+2. Teste o webhook manualmente:
 ```bash
 curl -X POST https://sdjbjcufuiziclxvtcrl.supabase.co/functions/v1/whatsapp-evolution-webhook \
 -H "Content-Type: application/json" \
@@ -253,23 +350,31 @@ curl -X POST https://sdjbjcufuiziclxvtcrl.supabase.co/functions/v1/whatsapp-evol
   "event": "messages.upsert",
   "instance": "financeiro",
   "data": {
-    "key": { "fromMe": false },
+    "key": { "fromMe": false, "remoteJid": "5511999999999@s.whatsapp.net" },
     "message": { "conversation": "Teste 100 reais" }
   }
 }'
 ```
 
-### WhatsApp desconectou
-- Escaneie o QR Code novamente
-- Acesse: `https://seu-app.up.railway.app/instance/connect/financeiro`
+3. Veja logs da Edge Function no Lovable Cloud
+
+### Opção 2 (Com n8n):
+1. Vá em **Executions** no n8n
+2. Veja onde o workflow falhou
+3. Clique na execução para ver detalhes
+4. Verifique os dados de entrada/saída de cada node
+
+## WhatsApp desconectou
+- Escaneie QR Code novamente:
+  `https://seu-app.up.railway.app/instance/connect/financeiro`
 
 ---
 
-## 🚀 Próximos Passos
+# 🚀 PRÓXIMOS PASSOS
 
 Depois de configurar:
 
-1. ✅ Envie transações por mensagem de voz (Evolution API transcreve)
+1. ✅ Envie transações por voz (Evolution API transcreve)
 2. ✅ Receba confirmações automáticas
 3. ✅ Veja tudo no dashboard
 4. 📊 (Futuro) Relatórios diários no WhatsApp
@@ -281,6 +386,7 @@ Depois de configurar:
 ## 📚 Documentação
 
 - **Evolution API**: https://doc.evolution-api.com/
+- **n8n**: https://docs.n8n.io/
 - **Railway**: https://docs.railway.app/
 - **Render**: https://render.com/docs
 
