@@ -387,15 +387,15 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Cartão 1</Label>
+                        <Label htmlFor="card1-select">Cartão 1</Label>
                         <Select value={card1} onValueChange={setCard1}>
-                          <SelectTrigger>
+                          <SelectTrigger id="card1-select">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Selecione</SelectItem>
                             {creditCards.map((card) => (
-                              <SelectItem key={card.id} value={card.id}>
+                              <SelectItem key={`card1-${card.id}`} value={card.id}>
                                 {card.name}
                               </SelectItem>
                             ))}
@@ -404,17 +404,17 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Parcelas no Cartão 1</Label>
+                        <Label htmlFor="card1-installments">Parcelas no Cartão 1</Label>
                         <Select
                           value={card1Installments.toString()}
                           onValueChange={(v) => setCard1Installments(parseInt(v))}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id="card1-installments">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
+                              <SelectItem key={`card1-inst-${num}`} value={num.toString()}>
                                 {num}x
                               </SelectItem>
                             ))}
@@ -425,15 +425,15 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Cartão 2</Label>
+                        <Label htmlFor="card2-select">Cartão 2</Label>
                         <Select value={card2} onValueChange={setCard2}>
-                          <SelectTrigger>
+                          <SelectTrigger id="card2-select">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Selecione</SelectItem>
                             {creditCards.map((card) => (
-                              <SelectItem key={card.id} value={card.id}>
+                              <SelectItem key={`card2-${card.id}`} value={card.id}>
                                 {card.name}
                               </SelectItem>
                             ))}
@@ -442,17 +442,17 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Parcelas no Cartão 2</Label>
+                        <Label htmlFor="card2-installments">Parcelas no Cartão 2</Label>
                         <Select
                           value={card2Installments.toString()}
                           onValueChange={(v) => setCard2Installments(parseInt(v))}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id="card2-installments">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
+                              <SelectItem key={`card2-inst-${num}`} value={num.toString()}>
                                 {num}x
                               </SelectItem>
                             ))}
