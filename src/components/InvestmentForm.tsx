@@ -59,6 +59,9 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
       const quantity = Number(formData.quantity);
       const price = Number(formData.average_price);
       const totalAmount = quantity * price;
+      
+      // Garantir formato correto da data (YYYY-MM-DD)
+      const transactionDate = formData.purchase_date;
 
       if (transactionType === "buy") {
         // Insert investment
@@ -71,7 +74,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             quantity,
             average_price: price,
             target_quantity: formData.target_quantity ? Number(formData.target_quantity) : 0,
-            purchase_date: formData.purchase_date,
+            purchase_date: transactionDate,
             notes: formData.notes || null,
             broker: formData.broker || null,
           }])
@@ -90,7 +93,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             quantity,
             price,
             total_amount: totalAmount,
-            transaction_date: formData.purchase_date,
+            transaction_date: transactionDate,
             notes: formData.notes || null,
           }]);
 
@@ -127,7 +130,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             quantity,
             price,
             total_amount: totalAmount,
-            transaction_date: formData.purchase_date,
+            transaction_date: transactionDate,
             notes: formData.notes || null,
           }]);
 
