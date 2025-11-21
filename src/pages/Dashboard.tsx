@@ -23,6 +23,12 @@ interface Transaction {
   category: string;
   date: string;
   description?: string;
+  credit_card_id?: string;
+  installments?: number;
+  current_installment?: number;
+  credit_cards?: {
+    name: string;
+  };
 }
 
 interface Investment {
@@ -48,7 +54,12 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select(`
+          *,
+          credit_cards (
+            name
+          )
+        `)
         .order("date", { ascending: false });
 
       if (error) throw error;
