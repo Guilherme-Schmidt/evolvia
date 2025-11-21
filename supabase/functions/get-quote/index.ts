@@ -26,9 +26,22 @@ serve(async (req) => {
 
     console.log(`Fetching quote for ticker: ${ticker}`);
 
-    // Using Brapi - Free API for Brazilian stocks with token
-    const apiUrl = `https://brapi.dev/api/quote/${ticker}?token=demo`;
-    console.log('API URL:', apiUrl);
+    // Using Brapi - Free API for Brazilian stocks with user's token
+    const brapiToken = Deno.env.get('BRAPI_API_KEY');
+    
+    if (!brapiToken) {
+      console.error('BRAPI_API_KEY not found in environment variables');
+      return new Response(
+        JSON.stringify({ error: 'API key not configured' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      );
+    }
+
+    const apiUrl = `https://brapi.dev/api/quote/${ticker}?token=${brapiToken}`;
+    console.log('Fetching from Brapi API...');
     
     const response = await fetch(apiUrl, {
       headers: {
