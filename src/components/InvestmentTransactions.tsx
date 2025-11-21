@@ -34,6 +34,9 @@ export const InvestmentTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
   const [editForm, setEditForm] = useState({
     quantity: 0,
     price: 0,
@@ -63,12 +66,24 @@ export const InvestmentTransactions = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentPage]);
 
   const fetchTransactions = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Get total count
+      const { count } = await supabase
+        .from("investment_transactions")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", user.id);
+
+      setTotalCount(count || 0);
+
+      // Get paginated data
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
       const { data, error } = await supabase
         .from("investment_transactions")
@@ -79,7 +94,8 @@ export const InvestmentTransactions = () => {
           )
         `)
         .eq("user_id", user.id)
-        .order("transaction_date", { ascending: false });
+        .order("transaction_date", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
       setTransactions(data || []);
@@ -121,6 +137,7 @@ export const InvestmentTransactions = () => {
 
       toast.success("Lançamento atualizado!");
       setEditingTransaction(null);
+      setCurrentPage(1);
       fetchTransactions();
     } catch (error: any) {
       toast.error(error.message);
@@ -139,6 +156,7 @@ export const InvestmentTransactions = () => {
       if (error) throw error;
 
       toast.success("Lançamento deletado!");
+      setCurrentPage(1);
       fetchTransactions();
     } catch (error: any) {
       toast.error(error.message);
@@ -277,6 +295,58 @@ export const InvestmentTransactions = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {totalCount > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, totalCount)} de {totalCount} lançamentos
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.ceil(totalCount / itemsPerPage) }, (_, i) => i + 1)
+                    .filter(page => {
+                      const totalPages = Math.ceil(totalCount / itemsPerPage);
+                      if (totalPages <= 7) return true;
+                      if (page === 1 || page === totalPages) return true;
+                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                      return false;
+                    })
+                    .map((page, index, array) => (
+                      <>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <span key={`ellipsis-${page}`} className="px-2 text-muted-foreground">...</span>
+                        )}
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-10"
+                        >
+                          {page}
+                        </Button>
+                      </>
+                    ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(totalCount / itemsPerPage)}
+                >
+                  Próxima
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
