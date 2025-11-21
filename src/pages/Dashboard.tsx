@@ -210,13 +210,16 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="finance" className="space-y-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-3">
             <TabsTrigger value="finance" className="gap-2">
               Finanças
             </TabsTrigger>
             <TabsTrigger value="cards" className="gap-2">
               <CreditCard className="h-4 w-4" />
               Cartões
+            </TabsTrigger>
+            <TabsTrigger value="budget" className="gap-2">
+              Orçamento e Metas
             </TabsTrigger>
           </TabsList>
 
@@ -227,10 +230,6 @@ const Dashboard = () => {
               balance={balance}
               totalInvestments={totalCurrent}
             />
-
-            <FinancialGoals />
-
-            <BudgetManager />
 
             <div className="grid gap-8 lg:grid-cols-2">
               <TransactionForm onSuccess={fetchTransactions} />
@@ -244,6 +243,11 @@ const Dashboard = () => {
           <TabsContent value="cards" className="space-y-8">
             <CreditCardManager />
             <CreditCardCharts />
+          </TabsContent>
+
+          <TabsContent value="budget" className="space-y-8">
+            <BudgetManager />
+            <FinancialGoals />
           </TabsContent>
         </Tabs>
       </main>

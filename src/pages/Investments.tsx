@@ -9,6 +9,7 @@ import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { DividendsHistory } from "@/components/DividendsHistory";
 import { InvestmentDashboard } from "@/components/InvestmentDashboard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, User, Home as HomeIcon, DollarSign } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NavLink } from "@/components/NavLink";
@@ -171,30 +172,56 @@ const Investments = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-4">
-        <InvestmentForm onSuccess={fetchInvestments} />
-        
-        <InvestmentDashboard />
-        
-        <InvestmentSummary
-          totalInvested={totalInvested}
-          totalCurrent={totalCurrent}
-          totalAssets={investments.length}
-        />
+      <main className="container mx-auto px-4 py-8">
+        <Tabs defaultValue="launches" className="space-y-8">
+          <TabsList className="grid w-full max-w-4xl mx-auto grid-cols-4">
+            <TabsTrigger value="launches" className="gap-2">
+              Lançamentos
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" className="gap-2">
+              Minha Carteira
+            </TabsTrigger>
+            <TabsTrigger value="controls" className="gap-2">
+              Controles
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2">
+              Análises
+            </TabsTrigger>
+          </TabsList>
 
-        <InvestmentCharts
-          investments={investments}
-          quotes={quotes}
-        />
+          <TabsContent value="launches" className="space-y-8">
+            <InvestmentSummary
+              totalInvested={totalInvested}
+              totalCurrent={totalCurrent}
+              totalAssets={investments.length}
+            />
 
-        <DividendsHistory investments={investments} />
+            <div className="grid gap-8 lg:grid-cols-2">
+              <InvestmentForm onSuccess={fetchInvestments} />
+              <InvestmentTransactions />
+            </div>
+          </TabsContent>
 
-        <InvestmentTransactions />
+          <TabsContent value="portfolio" className="space-y-8">
+            <InvestmentList
+              investments={investments}
+              onDelete={fetchInvestments}
+            />
+          </TabsContent>
 
-        <InvestmentList
-          investments={investments}
-          onDelete={fetchInvestments}
-        />
+          <TabsContent value="controls" className="space-y-8">
+            <InvestmentDashboard />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-8">
+            <InvestmentCharts
+              investments={investments}
+              quotes={quotes}
+            />
+
+            <DividendsHistory investments={investments} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
