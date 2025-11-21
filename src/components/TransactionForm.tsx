@@ -62,6 +62,11 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<string>("none");
   const [installments, setInstallments] = useState<number>(1);
+  const [splitBetweenCards, setSplitBetweenCards] = useState(false);
+  const [card1, setCard1] = useState<string>("none");
+  const [card1Installments, setCard1Installments] = useState<number>(6);
+  const [card2, setCard2] = useState<string>("none");
+  const [card2Installments, setCard2Installments] = useState<number>(6);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -96,8 +101,70 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
         return;
       }
 
+      // Validação para divisão entre cartões
+      if (splitBetweenCards) {
+        if (card1 === "none" || card2 === "none") {
+          toast.error("Selecione os dois cartões para dividir as parcelas");
+          return;
+        }
+        if (card1 === card2) {
+          toast.error("Selecione cartões diferentes");
+          return;
+        }
+      }
+
+      // Se está dividindo entre cartões
+      if (splitBetweenCards && card1 !== "none" && card2 !== "none") {
+        const totalInstallments = card1Installments + card2Installments;
+        const installmentAmount = parseFloat(amount) / totalInstallments;
+        const allTransactions = [];
+
+        // Criar parcelas do cartão 1
+        for (let i = 1; i <= card1Installments; i++) {
+          const installmentDate = new Date(date);
+          installmentDate.setMonth(installmentDate.getMonth() + (i - 1));
+          
+          allTransactions.push({
+            user_id: user.id,
+            title: `${title} - Cartão 1 (${i}/${card1Installments})`,
+            amount: installmentAmount,
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date: installmentDate.toISOString().split("T")[0],
+            credit_card_id: card1,
+            installments: totalInstallments,
+            current_installment: i,
+          });
+        }
+
+        // Criar parcelas do cartão 2
+        for (let i = 1; i <= card2Installments; i++) {
+          const installmentDate = new Date(date);
+          installmentDate.setMonth(installmentDate.getMonth() + (card1Installments + i - 1));
+          
+          allTransactions.push({
+            user_id: user.id,
+            title: `${title} - Cartão 2 (${i}/${card2Installments})`,
+            amount: installmentAmount,
+            type,
+            category: category as TransactionCategory,
+            description: description || null,
+            date: installmentDate.toISOString().split("T")[0],
+            credit_card_id: card2,
+            installments: totalInstallments,
+            current_installment: card1Installments + i,
+          });
+        }
+
+        const { error } = await supabase
+          .from("transactions")
+          .insert(allTransactions);
+
+        if (error) throw error;
+      }
       // Se tem cartão selecionado e mais de 1 parcela, cria transações parceladas
-      if (selectedCard && selectedCard !== "none" && installments > 1) {
+      else if (selectedCard && selectedCard !== "none" && installments > 1) {
         // Criar parcelas individuais diretamente
         const installmentAmount = parseFloat(amount) / installments;
         const installmentTransactions = [];
@@ -151,6 +218,11 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
       setDate(new Date().toISOString().split("T")[0]);
       setSelectedCard("none");
       setInstallments(1);
+      setSplitBetweenCards(false);
+      setCard1("none");
+      setCard1Installments(6);
+      setCard2("none");
+      setCard2Installments(6);
       
       onSuccess?.();
     } catch (error: any) {
@@ -249,43 +321,156 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
 
           {type === "expense" && (
             <>
-              <div className="space-y-2">
-                <Label>Cartão de Crédito (opcional)</Label>
-                <Select value={selectedCard} onValueChange={setSelectedCard}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um cartão" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {creditCards.map((card) => (
-                      <SelectItem key={card.id} value={card.id}>
-                        {card.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedCard && selectedCard !== "none" && (
-                <div className="space-y-2">
-                  <Label htmlFor="installments">Número de Parcelas</Label>
-                  <Select
-                    value={installments.toString()}
-                    onValueChange={(v) => setInstallments(parseInt(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num}x de R$ {(parseFloat(amount || "0") / num).toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="splitCards"
+                    checked={splitBetweenCards}
+                    onChange={(e) => {
+                      setSplitBetweenCards(e.target.checked);
+                      if (!e.target.checked) {
+                        setCard1("none");
+                        setCard2("none");
+                      } else {
+                        setSelectedCard("none");
+                      }
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="splitCards" className="font-medium">
+                    Dividir parcelas entre dois cartões
+                  </Label>
                 </div>
-              )}
+
+                {!splitBetweenCards ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Cartão de Crédito (opcional)</Label>
+                      <Select value={selectedCard} onValueChange={setSelectedCard}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cartão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {creditCards.map((card) => (
+                            <SelectItem key={card.id} value={card.id}>
+                              {card.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedCard && selectedCard !== "none" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="installments">Número de Parcelas</Label>
+                        <Select
+                          value={installments.toString()}
+                          onValueChange={(v) => setInstallments(parseInt(v))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num}x de R$ {(parseFloat(amount || "0") / num).toFixed(2)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Cartão 1</Label>
+                        <Select value={card1} onValueChange={setCard1}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {creditCards.map((card) => (
+                              <SelectItem key={card.id} value={card.id}>
+                                {card.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Parcelas no Cartão 1</Label>
+                        <Select
+                          value={card1Installments.toString()}
+                          onValueChange={(v) => setCard1Installments(parseInt(v))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num}x
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Cartão 2</Label>
+                        <Select value={card2} onValueChange={setCard2}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {creditCards.map((card) => (
+                              <SelectItem key={card.id} value={card.id}>
+                                {card.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Parcelas no Cartão 2</Label>
+                        <Select
+                          value={card2Installments.toString()}
+                          onValueChange={(v) => setCard2Installments(parseInt(v))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num}x
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {card1 !== "none" && card2 !== "none" && amount && (
+                      <div className="text-sm text-muted-foreground bg-background p-3 rounded border">
+                        <p className="font-medium mb-1">Resumo:</p>
+                        <p>Total de parcelas: {card1Installments + card2Installments}x</p>
+                        <p>Valor por parcela: R$ {(parseFloat(amount) / (card1Installments + card2Installments)).toFixed(2)}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </>
           )}
 
