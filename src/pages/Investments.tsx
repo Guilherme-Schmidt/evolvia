@@ -2,28 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { TransactionForm } from "@/components/TransactionForm";
-import { TransactionList } from "@/components/TransactionList";
-import { FinancialSummary } from "@/components/FinancialSummary";
-import { FinancialGoals } from "@/components/FinancialGoals";
-import { BudgetManager } from "@/components/BudgetManager";
-import { CreditCardManager } from "@/components/CreditCardManager";
-import { CreditCardCharts } from "@/components/CreditCardCharts";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, User, Home as HomeIcon, CreditCard, TrendingUp } from "lucide-react";
+import { InvestmentForm } from "@/components/InvestmentForm";
+import { InvestmentList } from "@/components/InvestmentList";
+import { InvestmentSummary } from "@/components/InvestmentSummary";
+import { InvestmentCharts } from "@/components/InvestmentCharts";
+import { InvestmentTransactions } from "@/components/InvestmentTransactions";
+import { DividendsHistory } from "@/components/DividendsHistory";
+import { InvestmentDashboard } from "@/components/InvestmentDashboard";
+import { LogOut, User, Home as HomeIcon, DollarSign } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NavLink } from "@/components/NavLink";
 import { toast } from "sonner";
-
-interface Transaction {
-  id: string;
-  title: string;
-  amount: number;
-  type: "income" | "expense";
-  category: string;
-  date: string;
-  description?: string;
-}
 
 interface Investment {
   id: string;
@@ -35,30 +24,13 @@ interface Investment {
   notes?: string;
 }
 
-const Dashboard = () => {
+const Investments = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [quotes, setQuotes] = useState<{ [key: string]: { regularMarketPrice: number } }>({});
   const [loading, setLoading] = useState(true);
-
-  const fetchTransactions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("date", { ascending: false });
-
-      if (error) throw error;
-      setTransactions(data || []);
-    } catch (error: any) {
-      toast.error("Erro ao carregar transações");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchInvestments = async () => {
     try {
@@ -71,6 +43,8 @@ const Dashboard = () => {
       setInvestments(data || []);
     } catch (error: any) {
       toast.error("Erro ao carregar investimentos");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,7 +71,6 @@ const Dashboard = () => {
       } else {
         setUser(user);
         fetchUserProfile(user.id);
-        fetchTransactions();
         fetchInvestments();
       }
     });
@@ -118,16 +91,6 @@ const Dashboard = () => {
     await supabase.auth.signOut();
     navigate("/auth");
   };
-
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const balance = totalIncome - totalExpense;
 
   const totalInvested = investments.reduce(
     (sum, inv) => sum + Number(inv.quantity) * Number(inv.average_price),
@@ -157,10 +120,10 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Financeiro
+                Investimentos
               </h1>
               <p className="text-sm text-muted-foreground">
-                Controle suas finanças pessoais
+                Gerencie sua carteira de investimentos
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -194,6 +157,7 @@ const Dashboard = () => {
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent"
               activeClassName="bg-accent"
             >
+              <DollarSign className="h-4 w-4 inline mr-2" />
               Financeiro
             </NavLink>
             <NavLink
@@ -201,54 +165,39 @@ const Dashboard = () => {
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent"
               activeClassName="bg-accent"
             >
-              <TrendingUp className="h-4 w-4 inline mr-2" />
               Investimentos
             </NavLink>
           </nav>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="finance" className="space-y-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-            <TabsTrigger value="finance" className="gap-2">
-              Finanças
-            </TabsTrigger>
-            <TabsTrigger value="cards" className="gap-2">
-              <CreditCard className="h-4 w-4" />
-              Cartões
-            </TabsTrigger>
-          </TabsList>
+      <main className="container mx-auto px-4 py-8 space-y-4">
+        <InvestmentForm onSuccess={fetchInvestments} />
+        
+        <InvestmentDashboard />
+        
+        <InvestmentSummary
+          totalInvested={totalInvested}
+          totalCurrent={totalCurrent}
+          totalAssets={investments.length}
+        />
 
-          <TabsContent value="finance" className="space-y-8">
-            <FinancialSummary
-              totalIncome={totalIncome}
-              totalExpense={totalExpense}
-              balance={balance}
-              totalInvestments={totalCurrent}
-            />
+        <InvestmentCharts
+          investments={investments}
+          quotes={quotes}
+        />
 
-            <FinancialGoals />
+        <DividendsHistory investments={investments} />
 
-            <BudgetManager />
+        <InvestmentTransactions />
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <TransactionForm onSuccess={fetchTransactions} />
-              <TransactionList
-                transactions={transactions}
-                onDelete={fetchTransactions}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="cards" className="space-y-8">
-            <CreditCardManager />
-            <CreditCardCharts />
-          </TabsContent>
-        </Tabs>
+        <InvestmentList
+          investments={investments}
+          onDelete={fetchInvestments}
+        />
       </main>
     </div>
   );
 };
 
-export default Dashboard;
+export default Investments;
