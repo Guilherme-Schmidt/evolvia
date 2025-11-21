@@ -98,28 +98,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
 
       // Se tem cartão selecionado e mais de 1 parcela, cria transações parceladas
       if (selectedCard && selectedCard !== "none" && installments > 1) {
-        // Criar transação pai
-        const { data: parentTransaction, error: parentError } = await supabase
-          .from("transactions")
-          .insert([{
-            user_id: user.id,
-            title,
-            amount: parseFloat(amount),
-            type,
-            category: category as TransactionCategory,
-            description: description || null,
-            date,
-            credit_card_id: selectedCard,
-            installments,
-            current_installment: 0,
-            parent_transaction_id: null,
-          }])
-          .select()
-          .single();
-
-        if (parentError) throw parentError;
-
-        // Criar parcelas individuais
+        // Criar parcelas individuais diretamente
         const installmentAmount = parseFloat(amount) / installments;
         const installmentTransactions = [];
         
@@ -138,7 +117,6 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
             credit_card_id: selectedCard,
             installments,
             current_installment: i,
-            parent_transaction_id: parentTransaction.id,
           });
         }
 
