@@ -24,6 +24,11 @@ interface Transaction {
   };
 }
 
+const formatDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split("-");
+  return `${day}/${month}/${year}`;
+};
+
 export const InvestmentTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,9 +184,9 @@ export const InvestmentTransactions = () => {
                     <div className="font-bold">
                       R$ {transaction.total_amount.toFixed(2)}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(transaction.transaction_date).toLocaleDateString("pt-BR")}
-                    </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(transaction.transaction_date)}
+                  </div>
                   </div>
                   <div className="flex gap-2">
                     <Button
