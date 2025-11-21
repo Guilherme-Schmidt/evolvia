@@ -50,9 +50,23 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
   const [quotes, setQuotes] = useState<{ [key: string]: Quote }>({});
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
 
+  // Agrupar investimentos pelo ticker
+  const groupedInvestments = investments.reduce((acc, inv) => {
+    const existing = acc.find(item => item.ticker === inv.ticker);
+    if (existing) {
+      const totalQuantity = existing.quantity + inv.quantity;
+      const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
+      existing.average_price = totalInvested / totalQuantity;
+      existing.quantity = totalQuantity;
+    } else {
+      acc.push({ ...inv });
+    }
+    return acc;
+  }, [] as Investment[]);
+
   useEffect(() => {
     // Buscar cotações para todos os investimentos
-    investments.forEach((inv) => {
+    groupedInvestments.forEach((inv) => {
       if (!quotes[inv.ticker]) {
         fetchQuote(inv.ticker);
       }
@@ -86,9 +100,13 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (ticker: string) => {
     try {
-      const { error } = await supabase.from("investments").delete().eq("id", id);
+      // Deletar todos os investimentos com o mesmo ticker
+      const { error } = await supabase
+        .from("investments")
+        .delete()
+        .eq("ticker", ticker);
 
       if (error) throw error;
 
@@ -128,7 +146,7 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
   };
 
   const getTotalPortfolio = () => {
-    return investments.reduce((total, inv) => {
+    return groupedInvestments.reduce((total, inv) => {
       const quote = quotes[inv.ticker];
       if (quote) {
         return total + (inv.quantity * quote.regularMarketPrice);
@@ -145,7 +163,7 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
         <CardTitle>Ações</CardTitle>
       </CardHeader>
       <CardContent>
-        {investments.length === 0 ? (
+        {groupedInvestments.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             Nenhum investimento cadastrado ainda.
           </p>
@@ -169,7 +187,7 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {investments.map((investment) => {
+                {groupedInvestments.map((investment) => {
                   const quote = quotes[investment.ticker];
                   const metrics = quote
                     ? calculateMetrics(investment, quote.regularMarketPrice)
@@ -180,7 +198,7 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
                     : 0;
 
                   return (
-                    <TableRow key={investment.id}>
+                    <TableRow key={investment.ticker}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
@@ -282,7 +300,7 @@ export const InvestmentTable = ({ investments, onDelete }: InvestmentTableProps)
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(investment.id)}
+                          onClick={() => handleDelete(investment.ticker)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

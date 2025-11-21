@@ -42,6 +42,20 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
   const [quotes, setQuotes] = useState<{ [key: string]: Quote }>({});
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
 
+  // Agrupar investimentos pelo ticker
+  const groupedInvestments = investments.reduce((acc, inv) => {
+    const existing = acc.find(item => item.ticker === inv.ticker);
+    if (existing) {
+      const totalQuantity = existing.quantity + inv.quantity;
+      const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
+      existing.average_price = totalInvested / totalQuantity;
+      existing.quantity = totalQuantity;
+    } else {
+      acc.push({ ...inv });
+    }
+    return acc;
+  }, [] as Investment[]);
+
   const fetchQuote = async (ticker: string) => {
     setLoading((prev) => ({ ...prev, [ticker]: true }));
     try {
@@ -69,9 +83,13 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (ticker: string) => {
     try {
-      const { error } = await supabase.from("investments").delete().eq("id", id);
+      // Deletar todos os investimentos com o mesmo ticker
+      const { error } = await supabase
+        .from("investments")
+        .delete()
+        .eq("ticker", ticker);
 
       if (error) throw error;
 
@@ -91,9 +109,9 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     return { profit, profitPercent };
   };
 
-  // Agrupar investimentos por tipo
-  const stocks = investments.filter((inv) => inv.type === "stock");
-  const fiis = investments.filter((inv) => inv.type === "fii");
+  // Agrupar investimentos por tipo usando os dados agrupados
+  const stocks = groupedInvestments.filter((inv) => inv.type === "stock");
+  const fiis = groupedInvestments.filter((inv) => inv.type === "fii");
 
   const renderInvestmentCard = (investment: Investment) => {
     const quote = quotes[investment.ticker];
@@ -103,7 +121,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
 
     return (
       <div
-        key={investment.id}
+        key={investment.ticker}
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
       >
         <div className="flex-1 space-y-2">
@@ -170,7 +188,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
           <Button
             size="sm"
             variant="destructive"
-            onClick={() => handleDelete(investment.id)}
+            onClick={() => handleDelete(investment.ticker)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
