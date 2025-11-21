@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 interface Transaction {
   id: string;
@@ -42,6 +43,26 @@ export const InvestmentTransactions = () => {
 
   useEffect(() => {
     fetchTransactions();
+
+    // Listen for real-time updates
+    const channel = supabase
+      .channel('investment-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'investment_transactions'
+        },
+        () => {
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchTransactions = async () => {
@@ -141,70 +162,120 @@ export const InvestmentTransactions = () => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Lançamentos</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Histórico de Lançamentos
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhum lançamento registrado ainda.
-            </p>
+            <div className="text-center py-12">
+              <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">
+                Nenhum lançamento registrado ainda.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Seus lançamentos de compra e venda aparecerão aqui.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {transactions.map((transaction) => (
-                <div
+                <Card
                   key={transaction.id}
-                  className="flex items-center justify-between p-3 border rounded-lg gap-3"
+                  className={`overflow-hidden transition-all hover:shadow-md ${
+                    transaction.type === "buy" 
+                      ? "border-l-4 border-l-green-500" 
+                      : "border-l-4 border-l-red-500"
+                  }`}
                 >
-                  <div className="flex items-center gap-3 flex-1">
-                    {transaction.type === "buy" ? (
-                      <ArrowUpCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <ArrowDownCircle className="h-5 w-5 text-red-600" />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          {transaction.investments.ticker}
-                        </span>
-                        <Badge variant={transaction.type === "buy" ? "default" : "destructive"}>
-                          {transaction.type === "buy" ? "Compra" : "Venda"}
-                        </Badge>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={`p-2 rounded-lg ${
+                          transaction.type === "buy" 
+                            ? "bg-green-500/10" 
+                            : "bg-red-500/10"
+                        }`}>
+                          {transaction.type === "buy" ? (
+                            <TrendingUp className={`h-5 w-5 ${
+                              transaction.type === "buy" ? "text-green-600" : "text-red-600"
+                            }`} />
+                          ) : (
+                            <TrendingDown className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-lg">
+                              {transaction.investments.ticker}
+                            </span>
+                            <Badge 
+                              variant={transaction.type === "buy" ? "default" : "destructive"}
+                              className="font-medium"
+                            >
+                              {transaction.type === "buy" ? "Compra" : "Venda"}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>{formatDate(transaction.transaction_date)}</span>
+                            </div>
+                            <Separator orientation="vertical" className="h-4" />
+                            <span className="font-medium">
+                              {transaction.quantity} {transaction.quantity === 1 ? 'unidade' : 'unidades'}
+                            </span>
+                            <span>×</span>
+                            <span className="font-medium">
+                              R$ {transaction.price.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {transaction.notes && (
+                            <p className="text-sm text-muted-foreground italic bg-muted/30 p-2 rounded">
+                              {transaction.notes}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {transaction.quantity} x R$ {transaction.price.toFixed(2)}
+
+                      <div className="flex items-start gap-3">
+                        <div className="text-right">
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Total
+                          </div>
+                          <div className={`font-bold text-lg ${
+                            transaction.type === "buy" ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {transaction.type === "sell" && "+"} R$ {transaction.total_amount.toFixed(2)}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(transaction)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(transaction.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      {transaction.notes && (
-                        <p className="text-xs text-muted-foreground italic mt-1">
-                          {transaction.notes}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">
-                      R$ {transaction.total_amount.toFixed(2)}
-                    </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatDate(transaction.transaction_date)}
-                  </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleEdit(transaction)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDelete(transaction.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
