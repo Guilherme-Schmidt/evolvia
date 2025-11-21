@@ -49,6 +49,24 @@ export const InvestmentDashboard = () => {
   const [contributions, setContributions] = useState<{ [key: string]: MonthlyContribution[] }>({});
   const [loading, setLoading] = useState(true);
 
+  // Agrupar investimentos pelo ticker
+  const groupedInvestments = investments.reduce((acc, inv) => {
+    const existing = acc.find(item => item.ticker === inv.ticker);
+    if (existing) {
+      const totalQuantity = existing.quantity + inv.quantity;
+      const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
+      existing.average_price = totalInvested / totalQuantity;
+      existing.quantity = totalQuantity;
+      // Manter o maior target_quantity
+      if (inv.target_quantity > existing.target_quantity) {
+        existing.target_quantity = inv.target_quantity;
+      }
+    } else {
+      acc.push({ ...inv });
+    }
+    return acc;
+  }, [] as Investment[]);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -155,7 +173,7 @@ export const InvestmentDashboard = () => {
   };
 
   const getTotalPortfolioValue = () => {
-    return investments.reduce((total, inv) => {
+    return groupedInvestments.reduce((total, inv) => {
       const quote = quotes[inv.ticker];
       if (quote) {
         return total + inv.quantity * quote.regularMarketPrice;
@@ -244,14 +262,14 @@ export const InvestmentDashboard = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {investments.map((investment) => {
+              {groupedInvestments.map((investment) => {
                 const quote = quotes[investment.ticker];
                 const progress = calculateProgress(investment.quantity, investment.target_quantity);
                 const percentage = getInvestmentPercentage(investment);
                 const patrimony = quote ? investment.quantity * quote.regularMarketPrice : 0;
 
                 return (
-                  <TableRow key={investment.id}>
+                  <TableRow key={investment.ticker}>
                     <TableCell className="font-medium">{investment.ticker}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {typeLabels[investment.type] || investment.type}
@@ -303,7 +321,7 @@ export const InvestmentDashboard = () => {
                   </TableRow>
                 );
               })}
-              {investments.length === 0 && (
+              {groupedInvestments.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7 + lastSixMonths.length} className="text-center text-muted-foreground">
                     Nenhum investimento cadastrado
