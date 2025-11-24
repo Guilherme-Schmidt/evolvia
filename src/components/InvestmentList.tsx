@@ -153,12 +153,19 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
       const currentValue = investment.quantity * currentPrice;
       const profit = currentValue - invested;
       const profitPercent = (profit / invested) * 100;
+      
+      // Calcular variação
+      const variation = currentPrice - investment.average_price;
+      const variationPercent = (variation / investment.average_price) * 100;
+      
       return { 
         invested, 
         currentValue, 
         profit, 
         profitPercent,
-        currentPrice 
+        currentPrice,
+        variation,
+        variationPercent
       };
     }
     
@@ -179,12 +186,19 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
       const profit = currentValue - invested;
       const profitPercent = (profit / invested) * 100;
       
+      // Calcular preço unitário estimado
+      const estimatedCurrentPrice = investment.average_price * Math.pow(1 + totalRate, years);
+      const variation = estimatedCurrentPrice - investment.average_price;
+      const variationPercent = (variation / investment.average_price) * 100;
+      
       return { 
         invested, 
         currentValue, 
         profit, 
         profitPercent,
-        currentPrice: null
+        currentPrice: estimatedCurrentPrice,
+        variation,
+        variationPercent
       };
     }
     
@@ -194,7 +208,58 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
       currentValue: invested, 
       profit: 0, 
       profitPercent: 0,
-      currentPrice: null
+      currentPrice: investment.average_price,
+      variation: 0,
+      variationPercent: 0
+    };
+  };
+
+  const calculateFixedIncomeValue = (investment: Investment) => {
+    const invested = investment.total_value || (investment.quantity * investment.average_price);
+    
+    if (investment.rate && investment.purchase_date) {
+      const purchaseDate = new Date(investment.purchase_date);
+      const today = new Date();
+      const daysDiff = Math.floor((today.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
+      const years = daysDiff / 365;
+      
+      let totalRate = 0;
+      
+      // Calcular taxa total baseado no indexador
+      if (investment.indexer === 'CDI') {
+        // Assumir CDI de 11% ao ano
+        const estimatedCDI = 11;
+        totalRate = (estimatedCDI * (investment.rate / 100)) / 100;
+      } else if (investment.indexer === 'IPCA') {
+        // IPCA + taxa
+        const estimatedIPCA = 4.5;
+        totalRate = (estimatedIPCA + investment.rate) / 100;
+      } else if (investment.indexer === 'Prefixado') {
+        totalRate = investment.rate / 100;
+      } else if (investment.indexer === 'SELIC') {
+        // Assumir SELIC de 11.25% ao ano
+        const estimatedSELIC = 11.25;
+        totalRate = (estimatedSELIC * (investment.rate / 100)) / 100;
+      }
+      
+      // Cálculo composto
+      const currentValue = invested * Math.pow(1 + totalRate, years);
+      const profit = currentValue - invested;
+      const profitPercent = (profit / invested) * 100;
+      
+      return { 
+        invested, 
+        currentValue, 
+        profit, 
+        profitPercent
+      };
+    }
+    
+    return { 
+      invested, 
+      currentValue: invested, 
+      profit: 0, 
+      profitPercent: 0
     };
   };
 
@@ -215,9 +280,11 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
             <tr className="border-b">
               <th className="text-left p-3 text-sm font-semibold">Ativo</th>
               <th className="text-right p-3 text-sm font-semibold">Quant.</th>
-              <th className="text-right p-3 text-sm font-semibold">Investido</th>
-              <th className="text-right p-3 text-sm font-semibold">Valor Atual</th>
-              <th className="text-right p-3 text-sm font-semibold">Rendimento</th>
+              <th className="text-right p-3 text-sm font-semibold">Preço Médio</th>
+              <th className="text-right p-3 text-sm font-semibold">Preço Atual</th>
+              <th className="text-right p-3 text-sm font-semibold">Variação</th>
+              <th className="text-right p-3 text-sm font-semibold">Rentabilidade</th>
+              <th className="text-right p-3 text-sm font-semibold">Saldo</th>
               <th className="text-right p-3 text-sm font-semibold">Ações</th>
             </tr>
           </thead>
@@ -232,32 +299,37 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
                       <div className="font-medium">{investment.ticker}</div>
                       {investment.rate && (
                         <div className="text-xs text-muted-foreground">
-                          Taxa: {investment.rate}% {investment.indexer ? `+ ${investment.indexer}` : ''}
+                          {investment.rate}% {investment.indexer ? `+ ${investment.indexer}` : ''}
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="text-right p-3">{investment.quantity.toFixed(4)}</td>
                   <td className="text-right p-3">
-                    R$ {values.invested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {investment.average_price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="text-right p-3 font-semibold">
-                    <div className="space-y-1">
-                      <div>R$ {values.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      {values.currentPrice && (
-                        <div className="text-xs text-muted-foreground">
-                          PU: R$ {values.currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                      )}
-                    </div>
+                    R$ {values.currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="text-right p-3">
-                    <span className={values.profit >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                      {values.profit >= 0 ? "+" : ""}R$ {values.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      <div className="text-xs">
-                        ({values.profitPercent >= 0 ? "+" : ""}{values.profitPercent.toFixed(2)}%)
+                    <Badge variant={values.variationPercent >= 0 ? "default" : "destructive"}>
+                      {values.variationPercent >= 0 ? "+" : ""}{values.variationPercent.toFixed(2)}%
+                    </Badge>
+                  </td>
+                  <td className="text-right p-3">
+                    <Badge variant="outline" className={values.profitPercent >= 0 ? "text-green-600 border-green-600" : "text-red-600 border-red-600"}>
+                      {values.profitPercent.toFixed(2)}%
+                    </Badge>
+                  </td>
+                  <td className="text-right p-3">
+                    <div className="space-y-1">
+                      <div className="font-semibold">
+                        R$ {values.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
-                    </span>
+                      <div className={`text-xs ${values.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {values.profit >= 0 ? "+" : ""}R$ {values.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
                   </td>
                   <td className="text-right p-3">
                     <Button
@@ -284,7 +356,9 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
           <thead>
             <tr className="border-b">
               <th className="text-left p-3 text-sm font-semibold">Ativo</th>
-              <th className="text-right p-3 text-sm font-semibold">Variação</th>
+              <th className="text-right p-3 text-sm font-semibold">Taxa</th>
+              <th className="text-right p-3 text-sm font-semibold">Investido</th>
+              <th className="text-right p-3 text-sm font-semibold">Valor Atual</th>
               <th className="text-right p-3 text-sm font-semibold">Rendimento</th>
               <th className="text-right p-3 text-sm font-semibold">Ações</th>
             </tr>
@@ -294,9 +368,10 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
               const description = [
                 investment.bond_type,
                 investment.issuer,
-                investment.payment_form,
-                investment.rate ? `${investment.rate}% ${investment.indexer || ''}` : investment.indexer
+                investment.payment_form
               ].filter(Boolean).join(' - ');
+              
+              const values = calculateFixedIncomeValue(investment);
               
               return (
                 <tr key={investment.ticker} className="border-b hover:bg-muted/50">
@@ -308,11 +383,22 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
                   </td>
                   <td className="text-right p-3">
                     <Badge variant="secondary">
-                      {investment.rate ? `${investment.rate}%` : '-'}
+                      {investment.rate}% {investment.indexer}
                     </Badge>
                   </td>
+                  <td className="text-right p-3">
+                    R$ {values.invested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
                   <td className="text-right p-3 font-semibold">
-                    R$ {investment.average_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {values.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="text-right p-3">
+                    <span className={values.profit >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                      {values.profit >= 0 ? "+" : ""}R$ {values.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      <div className="text-xs">
+                        ({values.profitPercent >= 0 ? "+" : ""}{values.profitPercent.toFixed(2)}%)
+                      </div>
+                    </span>
                   </td>
                   <td className="text-right p-3">
                     <Button

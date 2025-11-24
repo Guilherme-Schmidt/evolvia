@@ -437,6 +437,22 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               /* Campos específicos para Renda Fixa */
               <>
                 <div className="space-y-2">
+                  <Label htmlFor="ticker">Nome/Código do Investimento</Label>
+                  <Input
+                    id="ticker"
+                    value={formData.ticker}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ticker: e.target.value })
+                    }
+                    placeholder="Ex: CDB Banco Inter 2025, LCI Nubank"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Digite um nome descritivo para identificar este investimento
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="bond_type">Tipo de Título</Label>
                   <Select
                     value={formData.bond_type}
