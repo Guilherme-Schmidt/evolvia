@@ -49,9 +49,12 @@ const Investments = () => {
       const investmentData = data || [];
       setInvestments(investmentData);
       
-      // Buscar cotações para cada investimento
+      // Buscar cotações apenas para investimentos de mercado (não renda fixa/tesouro)
       for (const inv of investmentData) {
-        await fetchQuote(inv.ticker);
+        const isFixedIncome = inv.type === "fixed_income" || inv.type === "treasury";
+        if (!isFixedIncome) {
+          await fetchQuote(inv.ticker);
+        }
       }
       
       // Buscar dividendos recebidos

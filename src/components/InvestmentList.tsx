@@ -14,6 +14,16 @@ interface Investment {
   average_price: number;
   purchase_date: string;
   notes?: string;
+  // Campos específicos de Renda Fixa e Tesouro Direto
+  issuer?: string;
+  bond_type?: string;
+  indexer?: string;
+  rate?: number;
+  payment_form?: string;
+  maturity_date?: string;
+  daily_liquidity?: boolean;
+  total_value?: number;
+  broker?: string;
 }
 
 interface Quote {
@@ -109,15 +119,23 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     return { profit, profitPercent };
   };
 
-  // Agrupar investimentos por tipo usando os dados agrupados
-  const stocks = groupedInvestments.filter((inv) => inv.type === "stock");
-  const fiis = groupedInvestments.filter((inv) => inv.type === "fii");
+  // Agrupar investimentos por tipo
+  const investmentsByType = groupedInvestments.reduce((acc, inv) => {
+    if (!acc[inv.type]) {
+      acc[inv.type] = [];
+    }
+    acc[inv.type].push(inv);
+    return acc;
+  }, {} as { [key: string]: Investment[] });
 
   const renderInvestmentCard = (investment: Investment) => {
     const quote = quotes[investment.ticker];
     const profitData = quote
       ? calculateProfit(investment, quote.regularMarketPrice)
       : null;
+    
+    const isFixedIncome = investment.type === "fixed_income" || investment.type === "treasury";
+    const showQuote = !isFixedIncome; // Não buscar cotação para renda fixa e tesouro
 
     return (
       <div
@@ -130,7 +148,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
             <Badge variant="secondary">
               {typeLabels[investment.type]}
             </Badge>
-            {quote && (
+            {quote && showQuote && (
               <Badge
                 variant={
                   quote.regularMarketChange >= 0 ? "default" : "destructive"
@@ -143,26 +161,54 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
           </div>
 
           <div className="text-sm text-muted-foreground space-y-1">
-            <p>
-              Quantidade: {investment.quantity} | Preço médio: R${" "}
-              {investment.average_price.toFixed(2)}
-            </p>
-            {quote && (
+            {isFixedIncome ? (
               <>
-                <p className="font-semibold">
-                  Cotação atual: R$ {quote.regularMarketPrice.toFixed(2)}
+                <p className="font-medium">
+                  Valor Total: R$ {investment.average_price.toFixed(2)}
                 </p>
-                {profitData && (
-                  <p
-                    className={
-                      profitData.profit >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }
-                  >
-                    Resultado: R$ {profitData.profit.toFixed(2)} (
-                    {profitData.profitPercent.toFixed(2)}%)
-                  </p>
+                {investment.issuer && (
+                  <p>Emissor: {investment.issuer}</p>
+                )}
+                {investment.indexer && (
+                  <p>Indexador: {investment.indexer}</p>
+                )}
+                {investment.rate && (
+                  <p>Taxa: {investment.rate}% a.a.</p>
+                )}
+                {investment.maturity_date && (
+                  <p>Vencimento: {new Date(investment.maturity_date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                )}
+                {investment.daily_liquidity !== undefined && (
+                  <p>Liquidez Diária: {investment.daily_liquidity ? 'Sim' : 'Não'}</p>
+                )}
+                {investment.broker && (
+                  <p>Corretora: {investment.broker}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p>
+                  Quantidade: {investment.quantity} | Preço médio: R${" "}
+                  {investment.average_price.toFixed(2)}
+                </p>
+                {quote && (
+                  <>
+                    <p className="font-semibold">
+                      Cotação atual: R$ {quote.regularMarketPrice.toFixed(2)}
+                    </p>
+                    {profitData && (
+                      <p
+                        className={
+                          profitData.profit >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }
+                      >
+                        Resultado: R$ {profitData.profit.toFixed(2)} (
+                        {profitData.profitPercent.toFixed(2)}%)
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -173,18 +219,20 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
         </div>
 
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => fetchQuote(investment.ticker)}
-            disabled={loading[investment.ticker]}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${
-                loading[investment.ticker] ? "animate-spin" : ""
-              }`}
-            />
-          </Button>
+          {showQuote && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fetchQuote(investment.ticker)}
+              disabled={loading[investment.ticker]}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  loading[investment.ticker] ? "animate-spin" : ""
+                }`}
+              />
+            </Button>
+          )}
           <Button
             size="sm"
             variant="destructive"
@@ -199,47 +247,31 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
 
   return (
     <div className="space-y-6">
-      {/* Card de Ações */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Ações
-            <Badge variant="outline">{stocks.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stocks.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhuma ação cadastrada ainda.
-            </p>
-          ) : (
+      {Object.entries(investmentsByType).map(([type, investments]) => (
+        <Card key={type}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              {typeLabels[type] || type}
+              <Badge variant="outline">{investments.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              {stocks.map((investment) => renderInvestmentCard(investment))}
+              {investments.map((investment) => renderInvestmentCard(investment))}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Card de FIIs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Fundos Imobiliários
-            <Badge variant="outline">{fiis.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {fiis.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhum FII cadastrado ainda.
+          </CardContent>
+        </Card>
+      ))}
+      
+      {groupedInvestments.length === 0 && (
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-muted-foreground text-center">
+              Nenhum investimento cadastrado ainda.
             </p>
-          ) : (
-            <div className="space-y-4">
-              {fiis.map((investment) => renderInvestmentCard(investment))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
