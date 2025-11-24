@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TickerAutocomplete } from "@/components/TickerAutocomplete";
+import { TreasuryBondSelect } from "@/components/TreasuryBondSelect";
 import {
   Select,
   SelectContent,
@@ -279,39 +280,50 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             {transactionType === "buy" && formData.type === "treasury" ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="bond_type">Tipo de Título</Label>
-                  <Select
-                    value={formData.bond_type}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, bond_type: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger id="bond_type">
-                      <SelectValue placeholder="Selecione o título" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Tesouro Selic">Tesouro Selic</SelectItem>
-                      <SelectItem value="Tesouro IPCA+">Tesouro IPCA+</SelectItem>
-                      <SelectItem value="Tesouro IPCA+ com Juros Semestrais">Tesouro IPCA+ com Juros Semestrais</SelectItem>
-                      <SelectItem value="Tesouro Prefixado">Tesouro Prefixado</SelectItem>
-                      <SelectItem value="Tesouro Prefixado com Juros Semestrais">Tesouro Prefixado com Juros Semestrais</SelectItem>
-                      <SelectItem value="Tesouro RendA+">Tesouro RendA+</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="ticker">Título do Tesouro</Label>
+                  <TreasuryBondSelect
+                    value={formData.ticker}
+                    onValueChange={(value) => setFormData({ ...formData, ticker: value })}
+                    onBondSelect={(bond) => {
+                      // Preencher automaticamente os campos com os dados do título
+                      setFormData({
+                        ...formData,
+                        ticker: `${bond.name} ${new Date(bond.maturityDate).getFullYear()}`,
+                        bond_type: bond.name,
+                        average_price: bond.buyPrice.toString(),
+                        rate: bond.buyRate.toString(),
+                        maturity_date: bond.maturityDate,
+                      });
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="total_value">Valor Investido (R$)</Label>
+                  <Label htmlFor="quantity">Quantidade</Label>
                   <Input
-                    id="total_value"
+                    id="quantity"
                     type="number"
                     step="0.01"
-                    value={formData.total_value}
+                    value={formData.quantity}
                     onChange={(e) =>
-                      setFormData({ ...formData, total_value: e.target.value })
+                      setFormData({ ...formData, quantity: e.target.value })
                     }
-                    placeholder="Ex: 1000.00"
+                    placeholder="Ex: 0.10"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="average_price">Preço Unitário (R$)</Label>
+                  <Input
+                    id="average_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.average_price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, average_price: e.target.value })
+                    }
+                    placeholder="Preenchido automaticamente"
                     required
                   />
                 </div>
@@ -326,8 +338,11 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, rate: e.target.value })
                     }
-                    placeholder="Ex: 12.50"
+                    placeholder="Preenchida automaticamente"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Taxa de rendimento anual contratada na compra
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -353,6 +368,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                       setFormData({ ...formData, maturity_date: e.target.value })
                     }
                     required
+                    disabled
                   />
                 </div>
 
@@ -364,7 +380,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, broker: e.target.value })
                     }
-                    placeholder="Ex: Tesouro Direto"
+                    placeholder="Ex: XP Investimentos"
                   />
                 </div>
               </>
@@ -431,7 +447,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="rate">Taxa (% do CDI ou % a.a.)</Label>
+                  <Label htmlFor="rate">Taxa Contratada</Label>
                   <Input
                     id="rate"
                     type="number"
@@ -443,6 +459,9 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     placeholder="Ex: 120 (120% do CDI) ou 13.50 (13,50% a.a.)"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Taxa de rendimento anual que o emissor pagará (% do indexador ou % a.a. se prefixado)
+                  </p>
                 </div>
 
                 <div className="space-y-2">
