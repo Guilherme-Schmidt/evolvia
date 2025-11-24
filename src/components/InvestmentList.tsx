@@ -128,119 +128,175 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     return acc;
   }, {} as { [key: string]: Investment[] });
 
-  const renderInvestmentCard = (investment: Investment) => {
-    const quote = quotes[investment.ticker];
-    const profitData = quote
-      ? calculateProfit(investment, quote.regularMarketPrice)
-      : null;
-    
-    const isFixedIncome = investment.type === "fixed_income" || investment.type === "treasury";
-    const showQuote = !isFixedIncome; // Não buscar cotação para renda fixa e tesouro
-
+  const renderTreasuryTable = (investments: Investment[]) => {
     return (
-      <div
-        key={investment.ticker}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
-      >
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-lg">{investment.ticker}</span>
-            <Badge variant="secondary">
-              {typeLabels[investment.type]}
-            </Badge>
-            {quote && showQuote && (
-              <Badge
-                variant={
-                  quote.regularMarketChange >= 0 ? "default" : "destructive"
-                }
-              >
-                {quote.regularMarketChange >= 0 ? "+" : ""}
-                {quote.regularMarketChangePercent.toFixed(2)}%
-              </Badge>
-            )}
-          </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-3 text-sm font-semibold">Ativo</th>
+              <th className="text-right p-3 text-sm font-semibold">Quant.</th>
+              <th className="text-right p-3 text-sm font-semibold">Preço Médio</th>
+              <th className="text-right p-3 text-sm font-semibold">Preço Atual</th>
+              <th className="text-right p-3 text-sm font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {investments.map((investment) => {
+              const currentValue = investment.quantity * investment.average_price;
+              return (
+                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
+                        <span className="text-xs">📊</span>
+                      </div>
+                      <span className="font-medium">{investment.ticker}</span>
+                    </div>
+                  </td>
+                  <td className="text-right p-3">{investment.quantity.toFixed(2)}</td>
+                  <td className="text-right p-3">R$ {investment.average_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="text-right p-3 font-semibold">R$ {currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="text-right p-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(investment.ticker)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
-          <div className="text-sm text-muted-foreground space-y-1">
-            {isFixedIncome ? (
-              <>
-                <p className="font-medium">
-                  Valor Total: R$ {investment.average_price.toFixed(2)}
-                </p>
-                {investment.issuer && (
-                  <p>Emissor: {investment.issuer}</p>
-                )}
-                {investment.indexer && (
-                  <p>Indexador: {investment.indexer}</p>
-                )}
-                {investment.rate && (
-                  <p>Taxa: {investment.rate}% a.a.</p>
-                )}
-                {investment.maturity_date && (
-                  <p>Vencimento: {new Date(investment.maturity_date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
-                )}
-                {investment.daily_liquidity !== undefined && (
-                  <p>Liquidez Diária: {investment.daily_liquidity ? 'Sim' : 'Não'}</p>
-                )}
-                {investment.broker && (
-                  <p>Corretora: {investment.broker}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <p>
-                  Quantidade: {investment.quantity} | Preço médio: R${" "}
-                  {investment.average_price.toFixed(2)}
-                </p>
-                {quote && (
-                  <>
-                    <p className="font-semibold">
-                      Cotação atual: R$ {quote.regularMarketPrice.toFixed(2)}
-                    </p>
+  const renderFixedIncomeTable = (investments: Investment[]) => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-3 text-sm font-semibold">Ativo</th>
+              <th className="text-right p-3 text-sm font-semibold">Variação</th>
+              <th className="text-right p-3 text-sm font-semibold">Rendimento</th>
+              <th className="text-right p-3 text-sm font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {investments.map((investment) => {
+              const description = [
+                investment.bond_type,
+                investment.issuer,
+                investment.payment_form,
+                investment.rate ? `${investment.rate}% ${investment.indexer || ''}` : investment.indexer
+              ].filter(Boolean).join(' - ');
+              
+              return (
+                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                  <td className="p-3">
+                    <div className="space-y-1">
+                      <div className="font-medium">{investment.ticker}</div>
+                      <div className="text-xs text-muted-foreground">{description}</div>
+                    </div>
+                  </td>
+                  <td className="text-right p-3">
+                    <Badge variant="secondary">
+                      {investment.rate ? `${investment.rate}%` : '-'}
+                    </Badge>
+                  </td>
+                  <td className="text-right p-3 font-semibold">
+                    R$ {investment.average_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="text-right p-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(investment.ticker)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderStockTable = (investments: Investment[]) => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-3 text-sm font-semibold">Ativo</th>
+              <th className="text-right p-3 text-sm font-semibold">Quant.</th>
+              <th className="text-right p-3 text-sm font-semibold">Preço Médio</th>
+              <th className="text-right p-3 text-sm font-semibold">Cotação Atual</th>
+              <th className="text-right p-3 text-sm font-semibold">Resultado</th>
+              <th className="text-right p-3 text-sm font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {investments.map((investment) => {
+              const quote = quotes[investment.ticker];
+              const profitData = quote ? calculateProfit(investment, quote.regularMarketPrice) : null;
+              
+              return (
+                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{investment.ticker}</span>
+                      {quote && (
+                        <Badge variant={quote.regularMarketChange >= 0 ? "default" : "destructive"} className="text-xs">
+                          {quote.regularMarketChange >= 0 ? "+" : ""}{quote.regularMarketChangePercent.toFixed(2)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="text-right p-3">{investment.quantity}</td>
+                  <td className="text-right p-3">R$ {investment.average_price.toFixed(2)}</td>
+                  <td className="text-right p-3 font-semibold">
+                    {quote ? `R$ ${quote.regularMarketPrice.toFixed(2)}` : '-'}
+                  </td>
+                  <td className="text-right p-3">
                     {profitData && (
-                      <p
-                        className={
-                          profitData.profit >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }
-                      >
-                        Resultado: R$ {profitData.profit.toFixed(2)} (
-                        {profitData.profitPercent.toFixed(2)}%)
-                      </p>
+                      <span className={profitData.profit >= 0 ? "text-green-600" : "text-red-600"}>
+                        R$ {profitData.profit.toFixed(2)} ({profitData.profitPercent.toFixed(2)}%)
+                      </span>
                     )}
-                  </>
-                )}
-              </>
-            )}
-            {investment.notes && (
-              <p className="text-xs italic">{investment.notes}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          {showQuote && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => fetchQuote(investment.ticker)}
-              disabled={loading[investment.ticker]}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${
-                  loading[investment.ticker] ? "animate-spin" : ""
-                }`}
-              />
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleDelete(investment.ticker)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+                  </td>
+                  <td className="text-right p-3">
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => fetchQuote(investment.ticker)}
+                        disabled={loading[investment.ticker]}
+                      >
+                        <RefreshCw className={`h-4 w-4 ${loading[investment.ticker] ? "animate-spin" : ""}`} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(investment.ticker)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -256,9 +312,9 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {investments.map((investment) => renderInvestmentCard(investment))}
-            </div>
+            {type === "treasury" && renderTreasuryTable(investments)}
+            {type === "fixed_income" && renderFixedIncomeTable(investments)}
+            {!["treasury", "fixed_income"].includes(type) && renderStockTable(investments)}
           </CardContent>
         </Card>
       ))}

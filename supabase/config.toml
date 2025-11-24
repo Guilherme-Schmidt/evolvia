@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.send-due-notification]
 verify_jwt = false
+
+[functions.get-treasury-bonds]
+verify_jwt = false
