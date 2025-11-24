@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { InvestmentForm } from "@/components/InvestmentForm";
 import { InvestmentList } from "@/components/InvestmentList";
 import { InvestmentMetrics } from "@/components/InvestmentMetrics";
@@ -44,7 +45,14 @@ const Investments = () => {
         .order("purchase_date", { ascending: false });
 
       if (error) throw error;
-      setInvestments(data || []);
+      
+      const investmentData = data || [];
+      setInvestments(investmentData);
+      
+      // Buscar cotações para cada investimento
+      for (const inv of investmentData) {
+        await fetchQuote(inv.ticker);
+      }
       
       // Buscar dividendos recebidos
       const { data: dividendsData } = await supabase
@@ -57,6 +65,28 @@ const Investments = () => {
       toast.error("Erro ao carregar investimentos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchQuote = async (ticker: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-quote", {
+        body: { ticker },
+      });
+
+      if (error) throw error;
+
+      if (data?.results && data.results.length > 0) {
+        const result = data.results[0];
+        setQuotes((prev) => ({
+          ...prev,
+          [ticker]: {
+            regularMarketPrice: result.regularMarketPrice,
+          },
+        }));
+      }
+    } catch (error: any) {
+      console.error("Erro ao buscar cotação:", error);
     }
   };
 
@@ -214,6 +244,24 @@ const Investments = () => {
             </div>
 
             <BrokerAccountManager />
+
+            {/* Botão para atualizar cotações */}
+            <Card>
+              <CardContent className="pt-6">
+                <Button 
+                  onClick={() => {
+                    setLoading(true);
+                    investments.forEach(inv => fetchQuote(inv.ticker));
+                    setTimeout(() => setLoading(false), 2000);
+                    toast.success("Cotações atualizadas!");
+                  }}
+                  className="w-full"
+                  variant="outline"
+                >
+                  Atualizar Cotações em Tempo Real
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="portfolio" className="space-y-8">
