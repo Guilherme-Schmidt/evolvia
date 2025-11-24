@@ -11,12 +11,63 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching treasury bonds data...');
+    console.log('Fetching treasury bonds data from official API...');
     
-    // Lista fixa de títulos comuns do Tesouro Direto
-    // Em produção, idealmente isso viria de uma API real
-    // Por enquanto, fornecemos os títulos mais comuns para seleção manual
-    const bonds = [
+    // Busca dados reais da API oficial do Tesouro Transparente
+    const apiUrl = 'https://www.tesourotransparente.gov.br/ckan/dataset/df56aa42-484a-4a59-8184-7676580c81e3/resource/796d2059-14e9-44e3-80c9-2d9e30b405c1/download/precotaxatesourodireto.csv';
+    
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      console.error('Error fetching from Tesouro API:', response.status);
+      throw new Error('Failed to fetch treasury data');
+    }
+    
+    const csvText = await response.text();
+    const lines = csvText.split('\n').filter(line => line.trim());
+    
+    // Parse CSV (formato: Data Base;Tipo Titulo;Vencimento do Titulo;Taxa Compra Manha;Taxa Venda Manha;PU Compra Manha;PU Venda Manha;PU Base Manha)
+    const bonds: any[] = [];
+    const bondMap = new Map();
+    
+    // Skip header line
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
+      const parts = line.split(';');
+      if (parts.length < 8) continue;
+      
+      const date = parts[0];
+      const bondType = parts[1].trim();
+      const maturity = parts[2].trim();
+      const buyRate = parseFloat(parts[3]?.replace(',', '.') || '0');
+      const sellRate = parseFloat(parts[4]?.replace(',', '.') || '0');
+      const buyPrice = parseFloat(parts[5]?.replace(',', '.') || '0');
+      const sellPrice = parseFloat(parts[6]?.replace(',', '.') || '0');
+      
+      // Only get the most recent data for each bond
+      const bondKey = `${bondType}_${maturity}`;
+      if (!bondMap.has(bondKey) || date > bondMap.get(bondKey).date) {
+        bondMap.set(bondKey, {
+          date,
+          name: bondType,
+          maturityDate: maturity,
+          buyPrice,
+          sellPrice,
+          buyRate,
+          sellRate,
+          minInvestment: 30, // Valor mínimo padrão do Tesouro Direto
+        });
+      }
+    }
+    
+    // Convert map to array and sort by name
+    bonds.push(...Array.from(bondMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
+    
+    // Se não conseguiu buscar dados da API, retorna lista estática como fallback
+    if (bonds.length === 0) {
+      console.log('No data from API, using fallback list');
+      bonds.push(
       {
         name: "Tesouro Selic 2027",
         maturityDate: "2027-03-01",
@@ -179,9 +230,10 @@ serve(async (req) => {
         sellRate: 0,
         minInvestment: 0,
       },
-    ];
+      );
+    }
 
-    console.log('Treasury bonds list prepared successfully');
+    console.log(`Treasury bonds data prepared successfully: ${bonds.length} bonds`);
 
     return new Response(
       JSON.stringify({ bonds }),

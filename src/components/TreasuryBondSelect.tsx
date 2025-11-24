@@ -86,14 +86,23 @@ export const TreasuryBondSelect = ({
       <SelectContent>
         {bonds.map((bond) => {
           const maturityYear = new Date(bond.maturityDate).getFullYear();
+          const hasPriceData = bond.buyPrice > 0;
           
           return (
             <SelectItem key={bond.name} value={bond.name}>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 <span className="font-medium">{bond.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  Vencimento: {maturityYear}
-                </span>
+                <div className="flex flex-col text-xs text-muted-foreground">
+                  <span>Vencimento: {maturityYear}</span>
+                  {hasPriceData && (
+                    <span className="text-primary font-semibold">
+                      Preço Unitário: R$ {bond.buyPrice.toLocaleString('pt-BR', { 
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2 
+                      })}
+                    </span>
+                  )}
+                </div>
               </div>
             </SelectItem>
           );
