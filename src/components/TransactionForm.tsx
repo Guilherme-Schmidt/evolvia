@@ -71,9 +71,7 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   useEffect(() => {
-    if (type === "expense") {
-      fetchCreditCards();
-    }
+    fetchCreditCards();
   }, [type]);
 
   const fetchCreditCards = async () => {
@@ -318,6 +316,25 @@ export const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
               </Select>
             </div>
           </div>
+
+          {type === "income" && (
+            <div className="space-y-2">
+              <Label>Cartão de Crédito onde caiu a receita (opcional)</Label>
+              <Select value={selectedCard} onValueChange={setSelectedCard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cartão" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum / Conta corrente</SelectItem>
+                  {creditCards.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {type === "expense" && (
             <>

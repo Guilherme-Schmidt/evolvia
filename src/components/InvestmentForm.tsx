@@ -275,8 +275,8 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               </div>
             )}
 
-            {/* Campos específicos para Renda Fixa e Tesouro Direto */}
-            {transactionType === "buy" && (formData.type === "fixed_income" || formData.type === "treasury") ? (
+            {/* Campos específicos para Tesouro Direto */}
+            {transactionType === "buy" && formData.type === "treasury" ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="bond_type">Tipo de Título</Label>
@@ -288,25 +288,110 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     required
                   >
                     <SelectTrigger id="bond_type">
-                      <SelectValue placeholder="Selecione" />
+                      <SelectValue placeholder="Selecione o título" />
                     </SelectTrigger>
                     <SelectContent>
-                      {formData.type === "treasury" ? (
-                        <>
-                          <SelectItem value="Tesouro Selic">Tesouro Selic</SelectItem>
-                          <SelectItem value="Tesouro IPCA+">Tesouro IPCA+</SelectItem>
-                          <SelectItem value="Tesouro Prefixado">Tesouro Prefixado</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="CDB">CDB</SelectItem>
-                          <SelectItem value="LCI">LCI</SelectItem>
-                          <SelectItem value="LCA">LCA</SelectItem>
-                          <SelectItem value="LC">LC</SelectItem>
-                          <SelectItem value="LF">LF</SelectItem>
-                          <SelectItem value="Debênture">Debênture</SelectItem>
-                        </>
-                      )}
+                      <SelectItem value="Tesouro Selic">Tesouro Selic</SelectItem>
+                      <SelectItem value="Tesouro IPCA+">Tesouro IPCA+</SelectItem>
+                      <SelectItem value="Tesouro IPCA+ com Juros Semestrais">Tesouro IPCA+ com Juros Semestrais</SelectItem>
+                      <SelectItem value="Tesouro Prefixado">Tesouro Prefixado</SelectItem>
+                      <SelectItem value="Tesouro Prefixado com Juros Semestrais">Tesouro Prefixado com Juros Semestrais</SelectItem>
+                      <SelectItem value="Tesouro RendA+">Tesouro RendA+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="total_value">Valor Investido (R$)</Label>
+                  <Input
+                    id="total_value"
+                    type="number"
+                    step="0.01"
+                    value={formData.total_value}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_value: e.target.value })
+                    }
+                    placeholder="Ex: 1000.00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Taxa Contratada (% a.a.)</Label>
+                  <Input
+                    id="rate"
+                    type="number"
+                    step="0.01"
+                    value={formData.rate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, rate: e.target.value })
+                    }
+                    placeholder="Ex: 12.50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="purchase_date">Data da Compra</Label>
+                  <Input
+                    id="purchase_date"
+                    type="date"
+                    value={formData.purchase_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purchase_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maturity_date">Data de Vencimento</Label>
+                  <Input
+                    id="maturity_date"
+                    type="date"
+                    value={formData.maturity_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maturity_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="broker">Corretora</Label>
+                  <Input
+                    id="broker"
+                    value={formData.broker}
+                    onChange={(e) =>
+                      setFormData({ ...formData, broker: e.target.value })
+                    }
+                    placeholder="Ex: Tesouro Direto"
+                  />
+                </div>
+              </>
+            ) : transactionType === "buy" && formData.type === "fixed_income" ? (
+              /* Campos específicos para Renda Fixa */
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="bond_type">Tipo de Título</Label>
+                  <Select
+                    value={formData.bond_type}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, bond_type: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger id="bond_type">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CDB">CDB</SelectItem>
+                      <SelectItem value="LCI">LCI</SelectItem>
+                      <SelectItem value="LCA">LCA</SelectItem>
+                      <SelectItem value="LC">LC</SelectItem>
+                      <SelectItem value="LF">LF</SelectItem>
+                      <SelectItem value="Debênture">Debênture</SelectItem>
+                      <SelectItem value="CRI">CRI</SelectItem>
+                      <SelectItem value="CRA">CRA</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -320,6 +405,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                       setFormData({ ...formData, issuer: e.target.value })
                     }
                     placeholder="Ex: Banco Inter, Nubank"
+                    required
                   />
                 </div>
 
@@ -330,6 +416,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onValueChange={(value) =>
                       setFormData({ ...formData, indexer: value })
                     }
+                    required
                   >
                     <SelectTrigger id="indexer">
                       <SelectValue placeholder="Selecione" />
@@ -344,7 +431,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="rate">Taxa do CDI (%)</Label>
+                  <Label htmlFor="rate">Taxa (% do CDI ou % a.a.)</Label>
                   <Input
                     id="rate"
                     type="number"
@@ -353,7 +440,8 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, rate: e.target.value })
                     }
-                    placeholder="Ex: 100 (significa 100% do CDI)"
+                    placeholder="Ex: 120 (120% do CDI) ou 13.50 (13,50% a.a.)"
+                    required
                   />
                 </div>
 
@@ -364,6 +452,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onValueChange={(value) =>
                       setFormData({ ...formData, payment_form: value })
                     }
+                    required
                   >
                     <SelectTrigger id="payment_form">
                       <SelectValue placeholder="Selecione" />
@@ -377,7 +466,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="total_value">Valor em R$</Label>
+                  <Label htmlFor="total_value">Valor Investido (R$)</Label>
                   <Input
                     id="total_value"
                     type="number"
@@ -413,6 +502,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, maturity_date: e.target.value })
                     }
+                    required
                   />
                 </div>
 
