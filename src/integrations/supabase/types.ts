@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      broker_accounts: {
+        Row: {
+          account_balance: number
+          broker_name: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_balance?: number
+          broker_name: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_balance?: number
+          broker_name?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           amount: number
@@ -80,6 +107,50 @@ export type Database = {
         }
         Relationships: []
       }
+      dividends_received: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          investment_id: string
+          payment_date: string
+          ticker: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          investment_id: string
+          payment_date?: string
+          ticker: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          investment_id?: string
+          payment_date?: string
+          ticker?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dividends_received_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_goals: {
         Row: {
           category: string
@@ -124,6 +195,7 @@ export type Database = {
       }
       investment_transactions: {
         Row: {
+          broker_account_id: string | null
           created_at: string
           id: string
           investment_id: string
@@ -137,6 +209,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          broker_account_id?: string | null
           created_at?: string
           id?: string
           investment_id: string
@@ -150,6 +223,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          broker_account_id?: string | null
           created_at?: string
           id?: string
           investment_id?: string
@@ -164,6 +238,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "investment_transactions_broker_account_id_fkey"
+            columns: ["broker_account_id"]
+            isOneToOne: false
+            referencedRelation: "broker_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "investment_transactions_investment_id_fkey"
             columns: ["investment_id"]
             isOneToOne: false
@@ -176,6 +257,7 @@ export type Database = {
         Row: {
           average_price: number
           broker: string | null
+          broker_account_id: string | null
           created_at: string
           id: string
           notes: string | null
@@ -190,6 +272,7 @@ export type Database = {
         Insert: {
           average_price: number
           broker?: string | null
+          broker_account_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -204,6 +287,7 @@ export type Database = {
         Update: {
           average_price?: number
           broker?: string | null
+          broker_account_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -215,7 +299,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investments_broker_account_id_fkey"
+            columns: ["broker_account_id"]
+            isOneToOne: false
+            referencedRelation: "broker_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

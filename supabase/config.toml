@@ -2,3 +2,18 @@ project_id = "zepbljtkpfvaxhbyiybk"
 
 [functions.process-whatsapp-transaction]
 verify_jwt = false
+
+[functions.get-quote]
+verify_jwt = false
+
+[functions.get-dividends]
+verify_jwt = false
+
+[functions.search-tickers]
+verify_jwt = false
+
+[functions.suggest-goals]
+verify_jwt = true
+
+[functions.send-due-notification]
+verify_jwt = false
