@@ -35,6 +35,7 @@ interface InvestmentFormProps {
 export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
   const [loading, setLoading] = useState(false);
   const [transactionType, setTransactionType] = useState<"buy" | "sell">("buy");
+  const [sellingAssetType, setSellingAssetType] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     ticker: "",
     type: "",
@@ -66,7 +67,10 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
 
       if (!user) throw new Error("Usuário não autenticado");
 
-      const isFixedIncome = formData.type === "fixed_income" || formData.type === "treasury";
+      const isFixedIncome = transactionType === "sell" 
+        ? (sellingAssetType === "fixed_income" || sellingAssetType === "treasury")
+        : (formData.type === "fixed_income" || formData.type === "treasury");
+      
       // Validações
       if (!formData.ticker || formData.ticker.trim() === "") {
         toast.error("Por favor, preencha o ticker/código do ativo");
@@ -94,6 +98,24 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
       if (transactionType === "buy" && isFixedIncome && formData.type !== "treasury") {
         if (!formData.total_value || Number(formData.total_value) <= 0) {
           toast.error("Por favor, preencha o valor total investido");
+          return;
+        }
+      }
+
+      if (transactionType === "sell" && isFixedIncome) {
+        if (!formData.total_value || Number(formData.total_value) <= 0) {
+          toast.error("Por favor, preencha o valor que deseja vender");
+          return;
+        }
+      }
+
+      if (transactionType === "sell" && !isFixedIncome) {
+        if (!formData.quantity || Number(formData.quantity) <= 0) {
+          toast.error("Por favor, preencha uma quantidade válida");
+          return;
+        }
+        if (!formData.average_price || Number(formData.average_price) <= 0) {
+          toast.error("Por favor, preencha um preço válido");
           return;
         }
       }
@@ -177,11 +199,12 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
         toast.success("Compra registrada com sucesso!");
       } else {
         // Handle sell
+        const normalizedTicker = ticker.toUpperCase();
         const { data: existingInvestments, error: fetchError } = await supabase
           .from("investments")
           .select("*")
           .eq("user_id", user.id)
-          .eq("ticker", ticker)
+          .ilike("ticker", normalizedTicker)
           .order("purchase_date", { ascending: true });
 
         if (fetchError) throw fetchError;
@@ -190,52 +213,112 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           throw new Error("Você não possui este ativo para vender");
         }
 
-        const totalOwned = existingInvestments.reduce((sum, inv) => sum + Number(inv.quantity), 0);
-        
-        if (totalOwned < quantity) {
-          throw new Error(`Quantidade insuficiente. Você possui ${totalOwned} unidades de ${ticker}`);
-        }
-
-        // Register sell transaction using the first investment as reference
-        const { error: transactionError } = await supabase
-          .from("investment_transactions")
-          .insert([{
-            user_id: user.id,
-            investment_id: existingInvestments[0].id,
-            type: "sell",
-            quantity,
-            price,
-            total_amount: totalAmount,
-            transaction_date: transactionDate,
-            notes: formData.notes || null,
-          }]);
-
-        if (transactionError) throw transactionError;
-
-        // Update investment quantities (FIFO - First In First Out)
-        let remainingToSell = quantity;
-        for (const investment of existingInvestments) {
-          if (remainingToSell <= 0) break;
-
-          const currentQty = Number(investment.quantity);
-          if (currentQty <= remainingToSell) {
-            // Delete this investment entirely
-            await supabase
-              .from("investments")
-              .delete()
-              .eq("id", investment.id);
-            remainingToSell -= currentQty;
-          } else {
-            // Reduce quantity
-            await supabase
-              .from("investments")
-              .update({ quantity: currentQty - remainingToSell })
-              .eq("id", investment.id);
-            remainingToSell = 0;
+        if (isFixedIncome) {
+          // Venda de renda fixa por valor
+          const valueToSell = totalAmount;
+          const totalOwned = existingInvestments.reduce((sum, inv) => {
+            return sum + (inv.total_value || (Number(inv.quantity) * Number(inv.average_price)));
+          }, 0);
+          
+          if (totalOwned < valueToSell) {
+            throw new Error(`Valor insuficiente. Você possui R$ ${totalOwned.toFixed(2)} de ${ticker}`);
           }
-        }
 
-        toast.success("Venda registrada com sucesso!");
+          // Register sell transaction using the first investment as reference
+          const { error: transactionError } = await supabase
+            .from("investment_transactions")
+            .insert([{
+              user_id: user.id,
+              investment_id: existingInvestments[0].id,
+              type: "sell",
+              quantity: 1,
+              price: valueToSell,
+              total_amount: valueToSell,
+              transaction_date: transactionDate,
+              notes: formData.notes || null,
+            }]);
+
+          if (transactionError) throw transactionError;
+
+          // Update investment values (FIFO - First In First Out)
+          let remainingValueToSell = valueToSell;
+          for (const investment of existingInvestments) {
+            if (remainingValueToSell <= 0) break;
+
+            const currentValue = investment.total_value || (Number(investment.quantity) * Number(investment.average_price));
+            
+            if (currentValue <= remainingValueToSell) {
+              // Delete this investment entirely
+              await supabase
+                .from("investments")
+                .delete()
+                .eq("id", investment.id);
+              remainingValueToSell -= currentValue;
+            } else {
+              // Reduce value
+              const newValue = currentValue - remainingValueToSell;
+              await supabase
+                .from("investments")
+                .update({ 
+                  total_value: newValue,
+                  quantity: 1,
+                  average_price: newValue
+                })
+                .eq("id", investment.id);
+              remainingValueToSell = 0;
+            }
+          }
+
+          toast.success("Venda registrada com sucesso!");
+        } else {
+          // Venda de ações por quantidade
+          const totalOwned = existingInvestments.reduce((sum, inv) => sum + Number(inv.quantity), 0);
+          
+          if (totalOwned < quantity) {
+            throw new Error(`Quantidade insuficiente. Você possui ${totalOwned} unidades de ${ticker}`);
+          }
+
+          // Register sell transaction using the first investment as reference
+          const { error: transactionError } = await supabase
+            .from("investment_transactions")
+            .insert([{
+              user_id: user.id,
+              investment_id: existingInvestments[0].id,
+              type: "sell",
+              quantity,
+              price,
+              total_amount: totalAmount,
+              transaction_date: transactionDate,
+              notes: formData.notes || null,
+            }]);
+
+          if (transactionError) throw transactionError;
+
+          // Update investment quantities (FIFO - First In First Out)
+          let remainingToSell = quantity;
+          for (const investment of existingInvestments) {
+            if (remainingToSell <= 0) break;
+
+            const currentQty = Number(investment.quantity);
+            if (currentQty <= remainingToSell) {
+              // Delete this investment entirely
+              await supabase
+                .from("investments")
+                .delete()
+                .eq("id", investment.id);
+              remainingToSell -= currentQty;
+            } else {
+              // Reduce quantity
+              await supabase
+                .from("investments")
+                .update({ quantity: currentQty - remainingToSell })
+                .eq("id", investment.id);
+              remainingToSell = 0;
+            }
+          }
+
+          toast.success("Venda registrada com sucesso!");
+        }
       }
 
       setFormData({
@@ -278,7 +361,19 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             <Label>Tipo de Operação</Label>
             <Select
               value={transactionType}
-              onValueChange={(value: "buy" | "sell") => setTransactionType(value)}
+              onValueChange={(value: "buy" | "sell") => {
+                setTransactionType(value);
+                setSellingAssetType(null);
+                // Limpar campos ao mudar tipo de transação
+                setFormData({
+                  ...formData,
+                  ticker: "",
+                  quantity: "",
+                  average_price: "",
+                  total_value: "",
+                  notes: "",
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -624,48 +719,107 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 </div>
               </>
             ) : (
-              /* Campos para Ações, FIIs, ETFs, BDRs, Cripto */
+              /* Campos para Ações, FIIs, ETFs, BDRs, Cripto e Venda */
               <>
                 <div className="space-y-2">
                   <Label htmlFor="ticker">Ticker/Código</Label>
-                  <TickerAutocomplete
-                    id="ticker"
-                    value={formData.ticker}
-                    onChange={(value) => setFormData({ ...formData, ticker: value })}
-                    placeholder="Ex: PETR4, MXRF11"
-                    investmentType={transactionType === "buy" ? formData.type : undefined}
-                  />
+                  {transactionType === "sell" ? (
+                    <Input
+                      id="ticker"
+                      value={formData.ticker}
+                      onChange={async (e) => {
+                        const value = e.target.value;
+                        setFormData({ ...formData, ticker: value });
+                        
+                        // Auto-detectar o tipo de ativo ao preencher o ticker na venda
+                        if (value.trim().length >= 3) {
+                          try {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                              const { data } = await supabase
+                                .from("investments")
+                                .select("type")
+                                .eq("user_id", user.id)
+                                .ilike("ticker", value.trim())
+                                .limit(1)
+                                .single();
+                              
+                              if (data) {
+                                setSellingAssetType(data.type);
+                              }
+                            }
+                          } catch (error) {
+                            // Ignore errors
+                          }
+                        }
+                      }}
+                      placeholder="Ex: PETR4, CDB Banco Inter"
+                      required
+                    />
+                  ) : (
+                    <TickerAutocomplete
+                      id="ticker"
+                      value={formData.ticker}
+                      onChange={(value) => setFormData({ ...formData, ticker: value })}
+                      placeholder="Ex: PETR4, MXRF11"
+                      investmentType={formData.type}
+                    />
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantidade</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    step="0.01"
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, quantity: e.target.value })
-                    }
-                    placeholder="Ex: 100"
-                    required
-                  />
-                </div>
+                {transactionType === "sell" && sellingAssetType && (sellingAssetType === "fixed_income" || sellingAssetType === "treasury") ? (
+                  /* Campos para venda de Renda Fixa */
+                  <div className="space-y-2">
+                    <Label htmlFor="total_value">Valor a Vender (R$)</Label>
+                    <Input
+                      id="total_value"
+                      type="number"
+                      step="0.01"
+                      value={formData.total_value}
+                      onChange={(e) =>
+                        setFormData({ ...formData, total_value: e.target.value })
+                      }
+                      placeholder="Ex: 5000.00"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informe o valor em reais que deseja resgatar
+                    </p>
+                  </div>
+                ) : (
+                  /* Campos para ações/FIIs ou quando o tipo ainda não foi detectado */
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantidade</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        step="0.01"
+                        value={formData.quantity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, quantity: e.target.value })
+                        }
+                        placeholder="Ex: 100"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="average_price">{transactionType === "buy" ? "Preço de Compra (R$)" : "Preço de Venda (R$)"}</Label>
-                  <Input
-                    id="average_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.average_price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, average_price: e.target.value })
-                    }
-                    placeholder="Ex: 25.50"
-                    required
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="average_price">{transactionType === "buy" ? "Preço de Compra (R$)" : "Preço de Venda (R$)"}</Label>
+                      <Input
+                        id="average_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.average_price}
+                        onChange={(e) =>
+                          setFormData({ ...formData, average_price: e.target.value })
+                        }
+                        placeholder="Ex: 25.50"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
 
                 {transactionType === "buy" && (
                   <>
