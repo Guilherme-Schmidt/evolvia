@@ -324,11 +324,13 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     value={formData.ticker}
                     onValueChange={(value) => setFormData({ ...formData, ticker: value })}
                     onBondSelect={(bond) => {
-                      // Preencher automaticamente apenas o título e vencimento
-                      // Preço e taxa devem ser inseridos manualmente
+                      // Usar o mesmo formato do bondIdentifier para manter o select sincronizado
+                      const bondYear = new Date(bond.maturityDate).getFullYear();
+                      const fullBondName = `${bond.name} ${bondYear}`;
+                      
                       setFormData({
                         ...formData,
-                        ticker: `${bond.name}`,
+                        ticker: fullBondName, // Agora combina com o value do select
                         bond_type: bond.name,
                         maturity_date: bond.maturityDate,
                         average_price: '',
