@@ -256,45 +256,69 @@ export type Database = {
       investments: {
         Row: {
           average_price: number
+          bond_type: string | null
           broker: string | null
           broker_account_id: string | null
           created_at: string
+          daily_liquidity: boolean | null
           id: string
+          indexer: string | null
+          issuer: string | null
+          maturity_date: string | null
           notes: string | null
+          payment_form: string | null
           purchase_date: string
           quantity: number
+          rate: number | null
           target_quantity: number | null
           ticker: string
+          total_value: number | null
           type: Database["public"]["Enums"]["investment_type"]
           updated_at: string
           user_id: string
         }
         Insert: {
           average_price: number
+          bond_type?: string | null
           broker?: string | null
           broker_account_id?: string | null
           created_at?: string
+          daily_liquidity?: boolean | null
           id?: string
+          indexer?: string | null
+          issuer?: string | null
+          maturity_date?: string | null
           notes?: string | null
+          payment_form?: string | null
           purchase_date?: string
           quantity: number
+          rate?: number | null
           target_quantity?: number | null
           ticker: string
+          total_value?: number | null
           type: Database["public"]["Enums"]["investment_type"]
           updated_at?: string
           user_id: string
         }
         Update: {
           average_price?: number
+          bond_type?: string | null
           broker?: string | null
           broker_account_id?: string | null
           created_at?: string
+          daily_liquidity?: boolean | null
           id?: string
+          indexer?: string | null
+          issuer?: string | null
+          maturity_date?: string | null
           notes?: string | null
+          payment_form?: string | null
           purchase_date?: string
           quantity?: number
+          rate?: number | null
           target_quantity?: number | null
           ticker?: string
+          total_value?: number | null
           type?: Database["public"]["Enums"]["investment_type"]
           updated_at?: string
           user_id?: string

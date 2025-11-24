@@ -7,7 +7,8 @@ export const investmentFormSchema = z.object({
     .trim()
     .min(4, "Ticker deve ter no mínimo 4 caracteres")
     .max(10, "Ticker deve ter no máximo 10 caracteres")
-    .regex(/^[A-Z0-9]+$/, "Ticker deve conter apenas letras maiúsculas e números"),
+    .regex(/^[A-Z0-9]+$/, "Ticker deve conter apenas letras maiúsculas e números")
+    .optional(),
   
   type: z.string().refine(
     (val) => ["stock", "fii", "etf", "bdr", "treasury", "crypto", "fixed_income", "other"].includes(val),
@@ -17,12 +18,14 @@ export const investmentFormSchema = z.object({
   quantity: z
     .number()
     .positive("Quantidade deve ser maior que zero")
-    .max(1000000, "Quantidade muito alta"),
+    .max(1000000, "Quantidade muito alta")
+    .optional(),
   
   average_price: z
     .number()
     .positive("Preço deve ser maior que zero")
-    .max(1000000, "Preço muito alto"),
+    .max(1000000, "Preço muito alto")
+    .optional(),
   
   target_quantity: z
     .number()
@@ -48,6 +51,52 @@ export const investmentFormSchema = z.object({
     .string()
     .trim()
     .max(100, "Nome da corretora não pode exceder 100 caracteres")
+    .optional(),
+  
+  // Campos específicos para Renda Fixa e Tesouro Direto
+  issuer: z
+    .string()
+    .trim()
+    .max(100, "Nome do emissor não pode exceder 100 caracteres")
+    .optional(),
+  
+  bond_type: z
+    .string()
+    .trim()
+    .max(50, "Tipo de título não pode exceder 50 caracteres")
+    .optional(),
+  
+  indexer: z
+    .string()
+    .trim()
+    .max(50, "Indexador não pode exceder 50 caracteres")
+    .optional(),
+  
+  rate: z
+    .number()
+    .nonnegative("Taxa não pode ser negativa")
+    .max(1000, "Taxa muito alta")
+    .optional(),
+  
+  payment_form: z
+    .string()
+    .trim()
+    .max(50, "Forma de pagamento não pode exceder 50 caracteres")
+    .optional(),
+  
+  maturity_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use formato YYYY-MM-DD)")
+    .optional(),
+  
+  daily_liquidity: z
+    .boolean()
+    .optional(),
+  
+  total_value: z
+    .number()
+    .positive("Valor total deve ser maior que zero")
+    .max(100000000, "Valor muito alto")
     .optional(),
 });
 
