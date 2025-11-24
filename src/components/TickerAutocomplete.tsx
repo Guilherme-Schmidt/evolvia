@@ -8,9 +8,16 @@ interface TickerAutocompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   id?: string;
+  investmentType?: string; // Novo: filtrar por tipo
 }
 
-export const TickerAutocomplete = ({ value, onChange, placeholder, id }: TickerAutocompleteProps) => {
+export const TickerAutocomplete = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  id,
+  investmentType 
+}: TickerAutocompleteProps) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,10 +41,19 @@ export const TickerAutocomplete = ({ value, onChange, placeholder, id }: TickerA
       return;
     }
 
+    // Validação de segurança no cliente
+    if (search.length > 20) {
+      setSuggestions([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('search-tickers', {
-        body: { search }
+        body: { 
+          search: search.trim(), // Sanitizar input
+          type: investmentType 
+        }
       });
 
       if (error) throw error;
@@ -47,7 +63,8 @@ export const TickerAutocomplete = ({ value, onChange, placeholder, id }: TickerA
         setShowSuggestions(true);
       }
     } catch (error) {
-      console.error('Erro ao buscar tickers:', error);
+      // Não logar dados do usuário por segurança
+      console.error('Erro ao buscar tickers');
       setSuggestions([]);
     } finally {
       setLoading(false);
@@ -55,9 +72,11 @@ export const TickerAutocomplete = ({ value, onChange, placeholder, id }: TickerA
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value.toUpperCase();
-    onChange(newValue);
-    searchTickers(newValue);
+    const newValue = e.target.value.toUpperCase().trim();
+    // Validação: apenas letras e números
+    const sanitized = newValue.replace(/[^A-Z0-9]/g, '');
+    onChange(sanitized);
+    searchTickers(sanitized);
   };
 
   const handleSelectTicker = (ticker: string) => {
@@ -75,6 +94,7 @@ export const TickerAutocomplete = ({ value, onChange, placeholder, id }: TickerA
         onChange={handleInputChange}
         onFocus={() => value.length >= 2 && suggestions.length > 0 && setShowSuggestions(true)}
         placeholder={placeholder || "Ex: PETR4, MXRF11"}
+        maxLength={10} // Limite de segurança
       />
       
       {showSuggestions && suggestions.length > 0 && (
