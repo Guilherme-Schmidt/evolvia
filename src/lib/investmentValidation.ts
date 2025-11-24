@@ -105,16 +105,24 @@ export const sellTransactionSchema = z.object({
   ticker: z
     .string()
     .trim()
-    .min(4, "Ticker deve ter no mínimo 4 caracteres")
-    .max(10, "Ticker deve ter no máximo 10 caracteres"),
+    .min(1, "Ticker deve ter no mínimo 1 caractere")
+    .max(100, "Ticker deve ter no máximo 100 caracteres"),
   
   quantity: z
     .number()
-    .positive("Quantidade deve ser maior que zero"),
+    .positive("Quantidade deve ser maior que zero")
+    .optional(),
   
   price: z
     .number()
-    .positive("Preço deve ser maior que zero"),
+    .positive("Preço deve ser maior que zero")
+    .optional(),
+  
+  // Para renda fixa, permite vender por valor total
+  total_value: z
+    .number()
+    .positive("Valor deve ser maior que zero")
+    .optional(),
   
   transaction_date: z
     .string()
