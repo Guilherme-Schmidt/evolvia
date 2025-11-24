@@ -67,15 +67,54 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
       if (!user) throw new Error("Usuário não autenticado");
 
       const isFixedIncome = formData.type === "fixed_income" || formData.type === "treasury";
+      // Validações
+      if (!formData.ticker || formData.ticker.trim() === "") {
+        toast.error("Por favor, preencha o ticker/código do ativo");
+        return;
+      }
+
+      if (transactionType === "buy" && formData.type === "treasury") {
+        if (!formData.average_price || Number(formData.average_price) <= 0) {
+          toast.error("Por favor, preencha o preço unitário do título. Consulte no site do Tesouro Direto.");
+          return;
+        }
+      }
+
+      if (transactionType === "buy" && !isFixedIncome) {
+        if (!formData.quantity || Number(formData.quantity) <= 0) {
+          toast.error("Por favor, preencha uma quantidade válida");
+          return;
+        }
+        if (!formData.average_price || Number(formData.average_price) <= 0) {
+          toast.error("Por favor, preencha um preço válido");
+          return;
+        }
+      }
+
+      if (transactionType === "buy" && isFixedIncome && formData.type !== "treasury") {
+        if (!formData.total_value || Number(formData.total_value) <= 0) {
+          toast.error("Por favor, preencha o valor total investido");
+          return;
+        }
+      }
       
       // Para renda fixa, usar total_value ao invés de quantity * price
       let quantity, price, totalAmount, ticker;
       
       if (isFixedIncome) {
-        totalAmount = Number(formData.total_value);
-        quantity = 1; // Para renda fixa, consideramos 1 unidade
-        price = totalAmount;
-        ticker = formData.bond_type || "RENDA_FIXA";
+        if (formData.type === "treasury") {
+          // Para Tesouro Direto, usar quantity * average_price
+          ticker = formData.ticker;
+          quantity = Number(formData.quantity) || 1;
+          price = Number(formData.average_price);
+          totalAmount = quantity * price;
+        } else {
+          // Para renda fixa normal, usar total_value
+          totalAmount = Number(formData.total_value);
+          quantity = 1;
+          price = totalAmount;
+          ticker = formData.bond_type || "RENDA_FIXA";
+        }
       } else {
         ticker = formData.ticker.toUpperCase();
         quantity = Number(formData.quantity);
@@ -315,7 +354,9 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="average_price">Preço Unitário (R$)</Label>
+                  <Label htmlFor="average_price">
+                    Preço Unitário (R$) <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="average_price"
                     type="number"
@@ -328,7 +369,15 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Consulte o preço atual no site do Tesouro Direto
+                    Consulte o preço atual em{" "}
+                    <a
+                      href="https://www.tesourodireto.com.br/titulos/precos-e-taxas.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Tesouro Direto
+                    </a>
                   </p>
                 </div>
 
