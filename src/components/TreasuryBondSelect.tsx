@@ -66,7 +66,12 @@ export const TreasuryBondSelect = ({
     });
     
     if (selectedBond && onBondSelect) {
-      onBondSelect(selectedBond);
+      // Não temos preços da API, então o usuário deverá preencher manualmente
+      onBondSelect({
+        ...selectedBond,
+        buyPrice: 0,
+        buyRate: 0,
+      });
     }
   };
 
@@ -94,9 +99,9 @@ export const TreasuryBondSelect = ({
           return (
             <SelectItem key={bondIdentifier} value={bondIdentifier}>
               <div className="flex flex-col">
-                <span className="font-medium">{bond.name} {maturityYear}</span>
+                <span className="font-medium">{bond.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  Taxa: {bond.buyRate.toFixed(2)}% a.a. | Preço: R$ {bond.buyPrice.toFixed(2)}
+                  Vencimento: {new Date(bond.maturityDate).toLocaleDateString('pt-BR')}
                 </span>
               </div>
             </SelectItem>
