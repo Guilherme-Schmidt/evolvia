@@ -215,6 +215,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                 value={formData.ticker}
                 onChange={(value) => setFormData({ ...formData, ticker: value })}
                 placeholder="Ex: PETR4, MXRF11"
+                investmentType={transactionType === "buy" ? formData.type : undefined}
               />
             </div>
 
