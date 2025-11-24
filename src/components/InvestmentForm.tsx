@@ -104,19 +104,19 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
       if (isFixedIncome) {
         if (formData.type === "treasury") {
           // Para Tesouro Direto, usar quantity * average_price
-          ticker = formData.ticker;
+          ticker = formData.ticker.trim(); // Normalizar removendo espaços
           quantity = Number(formData.quantity) || 1;
           price = Number(formData.average_price);
           totalAmount = quantity * price;
         } else {
-          // Para renda fixa normal, usar total_value
+          // Para renda fixa normal, usar total_value e normalizar o ticker
           totalAmount = Number(formData.total_value);
           quantity = 1;
           price = totalAmount;
-          ticker = formData.bond_type || "RENDA_FIXA";
+          ticker = (formData.ticker || formData.bond_type || "RENDA_FIXA").trim();
         }
       } else {
-        ticker = formData.ticker.toUpperCase();
+        ticker = formData.ticker.trim().toUpperCase();
         quantity = Number(formData.quantity);
         price = Number(formData.average_price);
         totalAmount = quantity * price;

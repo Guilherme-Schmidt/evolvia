@@ -77,22 +77,37 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     fetchTreasuryPrices();
   }, []);
 
-  // Agrupar investimentos pelo ticker (exceto renda fixa e tesouro que não devem ser agrupados)
+  // Agrupar investimentos pelo ticker - normalizar o nome para evitar duplicatas
   const groupedInvestments = investments.reduce((acc, inv) => {
-    // Não agrupar renda fixa e tesouro direto - cada entrada é independente
-    if (inv.type === 'fixed_income' || inv.type === 'treasury') {
-      acc.push({ ...inv });
-    } else {
-      // Para ações, FIIs, ETFs, etc., agrupar por ticker
-      const existing = acc.find(item => item.ticker === inv.ticker && item.type === inv.type);
-      if (existing) {
+    // Normalizar o ticker removendo espaços extras e convertendo para maiúsculas
+    const normalizedTicker = inv.ticker.trim().toUpperCase();
+    
+    // Para renda fixa e tesouro, também agrupar se tiverem o mesmo nome normalizado e tipo
+    const existing = acc.find(item => 
+      item.ticker.trim().toUpperCase() === normalizedTicker && 
+      item.type === inv.type
+    );
+    
+    if (existing) {
+      if (inv.type === 'fixed_income' || inv.type === 'treasury') {
+        // Para renda fixa e tesouro, somar total_value ou quantity * average_price
+        const existingTotal = existing.total_value || (existing.quantity * existing.average_price);
+        const newTotal = inv.total_value || (inv.quantity * inv.average_price);
+        const combinedTotal = existingTotal + newTotal;
+        
+        existing.total_value = combinedTotal;
+        existing.quantity = existing.quantity + inv.quantity;
+        // Recalcular preço médio
+        existing.average_price = combinedTotal / existing.quantity;
+      } else {
+        // Para ações, FIIs, ETFs, etc.
         const totalQuantity = existing.quantity + inv.quantity;
         const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
         existing.average_price = totalInvested / totalQuantity;
         existing.quantity = totalQuantity;
-      } else {
-        acc.push({ ...inv });
       }
+    } else {
+      acc.push({ ...inv });
     }
     return acc;
   }, [] as Investment[]);
