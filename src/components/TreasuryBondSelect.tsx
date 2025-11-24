@@ -85,12 +85,14 @@ export const TreasuryBondSelect = ({
       </SelectTrigger>
       <SelectContent>
         {bonds.map((bond) => {
+          const maturityYear = new Date(bond.maturityDate).getFullYear();
+          
           return (
             <SelectItem key={bond.name} value={bond.name}>
               <div className="flex flex-col">
                 <span className="font-medium">{bond.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  Vencimento: {new Date(bond.maturityDate).toLocaleDateString('pt-BR')}
+                  Vencimento: {maturityYear}
                 </span>
               </div>
             </SelectItem>
