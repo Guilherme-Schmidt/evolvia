@@ -20,8 +20,18 @@ serve(async (req) => {
       );
     }
 
-    // Buscar dados de dividendos da Brapi com token
-    const apiUrl = `https://brapi.dev/api/quote/${ticker}?range=2y&interval=1d&dividends=true&token=demo`;
+    // Buscar dados de dividendos da Brapi com token do usuário
+    const brapiToken = Deno.env.get('BRAPI_API_KEY');
+    
+    if (!brapiToken) {
+      console.error('BRAPI_API_KEY not found in environment variables');
+      return new Response(
+        JSON.stringify({ error: 'API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const apiUrl = `https://brapi.dev/api/quote/${ticker}?range=2y&interval=1d&dividends=true&token=${brapiToken}`;
     console.log('Fetching dividends from:', apiUrl);
     
     const response = await fetch(apiUrl, {

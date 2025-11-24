@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InvestmentForm } from "@/components/InvestmentForm";
 import { InvestmentList } from "@/components/InvestmentList";
-import { InvestmentSummary } from "@/components/InvestmentSummary";
+import { InvestmentMetrics } from "@/components/InvestmentMetrics";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
 import { DividendsHistory } from "@/components/DividendsHistory";
 import { InvestmentDashboard } from "@/components/InvestmentDashboard";
+import { SnowballCalculator } from "@/components/SnowballCalculator";
+import { BrokerAccountManager } from "@/components/BrokerAccountManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, User, Home as HomeIcon, DollarSign } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -31,6 +33,7 @@ const Investments = () => {
   const [userName, setUserName] = useState<string>("");
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [quotes, setQuotes] = useState<{ [key: string]: { regularMarketPrice: number } }>({});
+  const [totalDividends, setTotalDividends] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchInvestments = async () => {
@@ -42,6 +45,14 @@ const Investments = () => {
 
       if (error) throw error;
       setInvestments(data || []);
+      
+      // Buscar dividendos recebidos
+      const { data: dividendsData } = await supabase
+        .from("dividends_received")
+        .select("amount");
+      
+      const total = dividendsData?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+      setTotalDividends(total);
     } catch (error: any) {
       toast.error("Erro ao carregar investimentos");
     } finally {
@@ -190,9 +201,10 @@ const Investments = () => {
           </TabsList>
 
           <TabsContent value="launches" className="space-y-8">
-            <InvestmentSummary
+            <InvestmentMetrics
               totalInvested={totalInvested}
               totalCurrent={totalCurrent}
+              totalDividends={totalDividends}
               totalAssets={investments.length}
             />
 
@@ -200,6 +212,8 @@ const Investments = () => {
               <InvestmentForm onSuccess={fetchInvestments} />
               <InvestmentTransactions />
             </div>
+
+            <BrokerAccountManager />
           </TabsContent>
 
           <TabsContent value="portfolio" className="space-y-8">
@@ -214,6 +228,8 @@ const Investments = () => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-8">
+            <SnowballCalculator />
+
             <InvestmentCharts
               investments={investments}
               quotes={quotes}

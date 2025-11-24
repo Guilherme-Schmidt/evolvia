@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TickerAutocomplete } from "@/components/TickerAutocomplete";
 import {
   Select,
   SelectContent,
@@ -209,14 +210,11 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="ticker">Ticker/Código</Label>
-              <Input
+              <TickerAutocomplete
                 id="ticker"
                 value={formData.ticker}
-                onChange={(e) =>
-                  setFormData({ ...formData, ticker: e.target.value.toUpperCase() })
-                }
+                onChange={(value) => setFormData({ ...formData, ticker: value })}
                 placeholder="Ex: PETR4, MXRF11"
-                required
               />
             </div>
 
