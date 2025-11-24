@@ -11,39 +11,171 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching treasury bonds from Tesouro Transparente API...');
+    console.log('Fetching treasury bonds data...');
     
-    // API oficial do Tesouro Nacional
-    const response = await fetch(
-      'https://www.tesourotransparente.gov.br/ckan/api/3/action/datastore_search?resource_id=796d2059-14e9-44e3-80c9-2d9e30b405c1&limit=100'
-    );
+    // Lista fixa de títulos comuns do Tesouro Direto
+    // Em produção, idealmente isso viria de uma API real
+    // Por enquanto, fornecemos os títulos mais comuns para seleção manual
+    const bonds = [
+      {
+        name: "Tesouro Selic 2027",
+        maturityDate: "2027-03-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Selic 2029",
+        maturityDate: "2029-03-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ 2029",
+        maturityDate: "2029-08-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ 2035",
+        maturityDate: "2035-05-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ 2045",
+        maturityDate: "2045-05-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ com Juros Semestrais 2032",
+        maturityDate: "2032-08-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ com Juros Semestrais 2040",
+        maturityDate: "2040-08-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro IPCA+ com Juros Semestrais 2055",
+        maturityDate: "2055-05-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Prefixado 2027",
+        maturityDate: "2027-01-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Prefixado 2031",
+        maturityDate: "2031-01-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Prefixado com Juros Semestrais 2033",
+        maturityDate: "2033-01-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro RendA+ 2030",
+        maturityDate: "2030-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro RendA+ 2035",
+        maturityDate: "2035-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro RendA+ 2040",
+        maturityDate: "2040-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Educa+ 2026",
+        maturityDate: "2026-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Educa+ 2030",
+        maturityDate: "2030-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
+        name: "Tesouro Educa+ 2035",
+        maturityDate: "2035-12-15",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+    ];
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Treasury bonds fetched successfully');
-
-    // Processar e formatar os dados
-    const bonds = data.result?.records || [];
-    
-    // Filtrar apenas títulos disponíveis para compra e ordenar por vencimento
-    const availableBonds = bonds
-      .filter((bond: any) => bond.PU_Compra_Manha && parseFloat(bond.PU_Compra_Manha) > 0)
-      .map((bond: any) => ({
-        name: bond.Tipo_Titulo,
-        maturityDate: bond.Data_Vencimento,
-        buyPrice: parseFloat(bond.PU_Compra_Manha),
-        sellPrice: parseFloat(bond.PU_Venda_Manha),
-        buyRate: parseFloat(bond.Taxa_Compra_Manha),
-        sellRate: parseFloat(bond.Taxa_Venda_Manha),
-        minInvestment: parseFloat(bond.Preco_Unitario_Compra) || 0,
-      }))
-      .sort((a: any, b: any) => new Date(a.maturityDate).getTime() - new Date(b.maturityDate).getTime());
+    console.log('Treasury bonds list prepared successfully');
 
     return new Response(
-      JSON.stringify({ bonds: availableBonds }),
+      JSON.stringify({ bonds }),
       { 
         headers: { 
           ...corsHeaders,
@@ -52,7 +184,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error fetching treasury bonds:', error);
+    console.error('Error preparing treasury bonds:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

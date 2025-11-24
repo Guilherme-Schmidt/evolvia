@@ -285,14 +285,15 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     value={formData.ticker}
                     onValueChange={(value) => setFormData({ ...formData, ticker: value })}
                     onBondSelect={(bond) => {
-                      // Preencher automaticamente os campos com os dados do título
+                      // Preencher automaticamente apenas o título e vencimento
+                      // Preço e taxa devem ser inseridos manualmente
                       setFormData({
                         ...formData,
-                        ticker: `${bond.name} ${new Date(bond.maturityDate).getFullYear()}`,
+                        ticker: `${bond.name}`,
                         bond_type: bond.name,
-                        average_price: bond.buyPrice.toString(),
-                        rate: bond.buyRate.toString(),
                         maturity_date: bond.maturityDate,
+                        average_price: '',
+                        rate: '',
                       });
                     }}
                   />
@@ -323,9 +324,12 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, average_price: e.target.value })
                     }
-                    placeholder="Preenchido automaticamente"
+                    placeholder="Ex: 3200.50"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Consulte o preço atual no site do Tesouro Direto
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -338,10 +342,10 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, rate: e.target.value })
                     }
-                    placeholder="Preenchida automaticamente"
+                    placeholder="Ex: 6.50 (IPCA + 6,50%)"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Taxa de rendimento anual contratada na compra
+                    Taxa de rendimento anual contratada na compra (para títulos IPCA+, informe apenas a parte acima do IPCA)
                   </p>
                 </div>
 
