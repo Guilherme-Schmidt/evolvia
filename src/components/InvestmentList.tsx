@@ -145,7 +145,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
             {investments.map((investment) => {
               const currentValue = investment.quantity * investment.average_price;
               return (
-                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                <tr key={investment.ticker} className="border-b hover:bg-muted/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
@@ -197,7 +197,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
               ].filter(Boolean).join(' - ');
               
               return (
-                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                <tr key={investment.ticker} className="border-b hover:bg-muted/50">
                   <td className="p-3">
                     <div className="space-y-1">
                       <div className="font-medium">{investment.ticker}</div>
@@ -250,7 +250,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
               const profitData = quote ? calculateProfit(investment, quote.regularMarketPrice) : null;
               
               return (
-                <tr key={investment.id} className="border-b hover:bg-muted/50">
+                <tr key={investment.ticker} className="border-b hover:bg-muted/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{investment.ticker}</span>
