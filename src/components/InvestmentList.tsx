@@ -77,16 +77,22 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     fetchTreasuryPrices();
   }, []);
 
-  // Agrupar investimentos pelo ticker
+  // Agrupar investimentos pelo ticker (exceto renda fixa e tesouro que não devem ser agrupados)
   const groupedInvestments = investments.reduce((acc, inv) => {
-    const existing = acc.find(item => item.ticker === inv.ticker);
-    if (existing) {
-      const totalQuantity = existing.quantity + inv.quantity;
-      const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
-      existing.average_price = totalInvested / totalQuantity;
-      existing.quantity = totalQuantity;
-    } else {
+    // Não agrupar renda fixa e tesouro direto - cada entrada é independente
+    if (inv.type === 'fixed_income' || inv.type === 'treasury') {
       acc.push({ ...inv });
+    } else {
+      // Para ações, FIIs, ETFs, etc., agrupar por ticker
+      const existing = acc.find(item => item.ticker === inv.ticker && item.type === inv.type);
+      if (existing) {
+        const totalQuantity = existing.quantity + inv.quantity;
+        const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
+        existing.average_price = totalInvested / totalQuantity;
+        existing.quantity = totalQuantity;
+      } else {
+        acc.push({ ...inv });
+      }
     }
     return acc;
   }, [] as Investment[]);
@@ -147,39 +153,32 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
   const calculateTreasuryValue = (investment: Investment) => {
     const invested = investment.quantity * investment.average_price;
     
-    // Usar o preço atual da API se disponível
-    const currentPrice = treasuryPrices[investment.ticker];
-    if (currentPrice && currentPrice > 0) {
-      const currentValue = investment.quantity * currentPrice;
-      const profit = currentValue - invested;
-      const profitPercent = (profit / invested) * 100;
-      
-      // Calcular variação
-      const variation = currentPrice - investment.average_price;
-      const variationPercent = (variation / investment.average_price) * 100;
-      
-      return { 
-        invested, 
-        currentValue, 
-        profit, 
-        profitPercent,
-        currentPrice,
-        variation,
-        variationPercent
-      };
-    }
-    
-    // Fallback: calcular baseado no tempo e taxa se não tiver preço atual
-    if (investment.rate && investment.purchase_date) {
+    // Calcular baseado no tempo e taxa (sempre aplicar rendimento)
+    if (investment.purchase_date) {
       const purchaseDate = new Date(investment.purchase_date);
       const today = new Date();
       const daysDiff = Math.floor((today.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
       const years = daysDiff / 365;
       
-      // Para títulos IPCA+, a taxa informada é apenas a parte acima do IPCA
-      // Vamos assumir IPCA de 4.5% ao ano como estimativa
-      const estimatedIPCA = investment.indexer?.includes('IPCA') ? 4.5 : 0;
-      const totalRate = (investment.rate + estimatedIPCA) / 100;
+      // Identificar o tipo de título pelo nome
+      const tickerUpper = investment.ticker.toUpperCase();
+      let totalRate = 0;
+      
+      if (tickerUpper.includes('IPCA')) {
+        // Para IPCA+, usar a taxa informada + IPCA estimado de 4.5%
+        const ipca = 4.5;
+        const taxaAcima = investment.rate || 6; // Default 6% se não informado
+        totalRate = (ipca + taxaAcima) / 100;
+      } else if (tickerUpper.includes('SELIC')) {
+        // Para Tesouro Selic, usar SELIC de 11.25%
+        totalRate = 11.25 / 100;
+      } else if (tickerUpper.includes('PREFIXADO')) {
+        // Para Prefixado, usar a taxa informada
+        totalRate = (investment.rate || 10) / 100; // Default 10% se não informado
+      } else {
+        // Fallback genérico
+        totalRate = (investment.rate || 8) / 100;
+      }
       
       // Cálculo composto: Valor Futuro = Valor Presente * (1 + taxa)^anos
       const currentValue = invested * Math.pow(1 + totalRate, years);
@@ -202,7 +201,7 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
       };
     }
     
-    // Se não tem dados suficientes, retorna apenas o valor investido
+    // Se não tem data de compra, retorna apenas o valor investido
     return { 
       invested, 
       currentValue: invested, 
