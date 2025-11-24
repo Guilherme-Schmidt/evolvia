@@ -7,7 +7,7 @@ import { InvestmentList } from "@/components/InvestmentList";
 import { InvestmentMetrics } from "@/components/InvestmentMetrics";
 import { InvestmentCharts } from "@/components/InvestmentCharts";
 import { InvestmentTransactions } from "@/components/InvestmentTransactions";
-import { DividendsHistory } from "@/components/DividendsHistory";
+import { DividendsManager } from "@/components/DividendsManager";
 import { InvestmentDashboard } from "@/components/InvestmentDashboard";
 import { SnowballCalculator } from "@/components/SnowballCalculator";
 import { BrokerAccountManager } from "@/components/BrokerAccountManager";
@@ -235,7 +235,7 @@ const Investments = () => {
               quotes={quotes}
             />
 
-            <DividendsHistory investments={investments} />
+            <DividendsManager investments={investments} />
           </TabsContent>
         </Tabs>
       </main>
