@@ -36,6 +36,15 @@ serve(async (req) => {
         minInvestment: 0,
       },
       {
+        name: "Tesouro Selic 2031",
+        maturityDate: "2031-03-01",
+        buyPrice: 0,
+        sellPrice: 0,
+        buyRate: 0,
+        sellRate: 0,
+        minInvestment: 0,
+      },
+      {
         name: "Tesouro IPCA+ 2029",
         maturityDate: "2029-08-15",
         buyPrice: 0,
