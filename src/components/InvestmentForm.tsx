@@ -326,11 +326,11 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onBondSelect={(bond) => {
                       setFormData({
                         ...formData,
-                        ticker: bond.name, // Nome já contém o ano
+                        ticker: bond.name,
                         bond_type: bond.name,
                         maturity_date: bond.maturityDate,
-                        average_price: '',
-                        rate: '',
+                        average_price: bond.buyPrice > 0 ? bond.buyPrice.toFixed(2) : '',
+                        rate: bond.buyRate > 0 ? bond.buyRate.toFixed(2) : '',
                       });
                     }}
                   />
@@ -367,15 +367,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Consulte o preço atual em{" "}
-                    <a
-                      href="https://www.tesourodireto.com.br/titulos/precos-e-taxas.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      Tesouro Direto
-                    </a>
+                    Preço preenchido automaticamente com dados oficiais do Tesouro Transparente. Ajuste se necessário.
                   </p>
                 </div>
 
@@ -392,7 +384,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     placeholder="Ex: 6.50 (IPCA + 6,50%)"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Taxa de rendimento anual contratada na compra (para títulos IPCA+, informe apenas a parte acima do IPCA)
+                    Taxa preenchida automaticamente quando disponível. Para títulos IPCA+, informe apenas a parte acima do IPCA.
                   </p>
                 </div>
 
@@ -418,9 +410,15 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, maturity_date: e.target.value })
                     }
-                    required
+                    required={!formData.daily_liquidity}
                     disabled
+                    placeholder={formData.daily_liquidity ? "Não aplicável" : ""}
                   />
+                  {formData.daily_liquidity && (
+                    <p className="text-sm text-muted-foreground">
+                      Títulos com liquidez diária não possuem data de vencimento fixa
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -572,8 +570,14 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, maturity_date: e.target.value })
                     }
-                    required
+                    required={!formData.daily_liquidity}
+                    placeholder={formData.daily_liquidity ? "Não aplicável" : ""}
                   />
+                  {formData.daily_liquidity && (
+                    <p className="text-sm text-muted-foreground">
+                      Investimentos com liquidez diária não requerem data de vencimento
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 flex items-center gap-2 md:col-span-2">
