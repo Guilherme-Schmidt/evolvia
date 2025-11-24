@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Plus, Trash2 } from "lucide-react";
+import { DollarSign, Plus, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -29,6 +29,7 @@ interface Props {
 export const DividendsManager = ({ investments }: Props) => {
   const [dividends, setDividends] = useState<Dividend[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncingTicker, setSyncingTicker] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     ticker: "",
     amount: "",
@@ -102,6 +103,29 @@ export const DividendsManager = ({ investments }: Props) => {
     }
   };
 
+  const handleSyncDividends = async (ticker: string) => {
+    setSyncingTicker(ticker);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-dividends", {
+        body: { ticker },
+      });
+
+      if (error) throw error;
+
+      if (data.synced > 0) {
+        toast.success(data.message || `${data.synced} dividendos sincronizados!`);
+        fetchDividends();
+      } else {
+        toast.info("Nenhum dividendo novo encontrado");
+      }
+    } catch (error: any) {
+      console.error("Error syncing dividends:", error);
+      toast.error("Erro ao sincronizar dividendos");
+    } finally {
+      setSyncingTicker(null);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
@@ -139,7 +163,32 @@ export const DividendsManager = ({ investments }: Props) => {
         </p>
       </CardHeader>
       <CardContent>
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Sincronizar Dividendos Automaticamente</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {uniqueTickers.filter(t => !t.includes('Tesouro') && !t.includes('CDB') && !t.includes('LCI') && !t.includes('LCA')).map((ticker) => (
+              <Button
+                key={ticker}
+                variant="outline"
+                size="sm"
+                onClick={() => handleSyncDividends(ticker)}
+                disabled={syncingTicker === ticker}
+                className="justify-between"
+              >
+                <span>{ticker}</span>
+                <RefreshCw className={`h-3 w-3 ml-2 ${syncingTicker === ticker ? 'animate-spin' : ''}`} />
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Clique em um ativo para buscar automaticamente o histórico de dividendos da B3
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <h3 className="text-sm font-semibold">Adicionar Manualmente</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="ticker">Ativo</Label>

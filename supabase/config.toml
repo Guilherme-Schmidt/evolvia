@@ -1,4 +1,4 @@
-project_id = "zepbljtkpfvaxhbyiybk"
+project_id = "sdjbjcufuiziclxvtcrl"
 
 [functions.process-whatsapp-transaction]
 verify_jwt = false
@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.get-treasury-bonds]
 verify_jwt = false
+
+[functions.get-historical-dividends]
+verify_jwt = false
+
+[functions.sync-dividends]
+verify_jwt = true
