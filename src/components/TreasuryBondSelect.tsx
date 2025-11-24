@@ -60,18 +60,10 @@ export const TreasuryBondSelect = ({
     onValueChange(newValue);
     
     // Encontrar o bond selecionado e passar os dados
-    const selectedBond = bonds.find((bond) => {
-      const bondIdentifier = `${bond.name} ${new Date(bond.maturityDate).getFullYear()}`;
-      return bondIdentifier === newValue;
-    });
+    const selectedBond = bonds.find((bond) => bond.name === newValue);
     
     if (selectedBond && onBondSelect) {
-      // Não temos preços da API, então o usuário deverá preencher manualmente
-      onBondSelect({
-        ...selectedBond,
-        buyPrice: 0,
-        buyRate: 0,
-      });
+      onBondSelect(selectedBond);
     }
   };
 
@@ -93,11 +85,8 @@ export const TreasuryBondSelect = ({
       </SelectTrigger>
       <SelectContent>
         {bonds.map((bond) => {
-          const bondIdentifier = `${bond.name} ${new Date(bond.maturityDate).getFullYear()}`;
-          const maturityYear = new Date(bond.maturityDate).getFullYear();
-          
           return (
-            <SelectItem key={bondIdentifier} value={bondIdentifier}>
+            <SelectItem key={bond.name} value={bond.name}>
               <div className="flex flex-col">
                 <span className="font-medium">{bond.name}</span>
                 <span className="text-xs text-muted-foreground">

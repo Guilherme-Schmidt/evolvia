@@ -324,13 +324,9 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                     value={formData.ticker}
                     onValueChange={(value) => setFormData({ ...formData, ticker: value })}
                     onBondSelect={(bond) => {
-                      // Usar o mesmo formato do bondIdentifier para manter o select sincronizado
-                      const bondYear = new Date(bond.maturityDate).getFullYear();
-                      const fullBondName = `${bond.name} ${bondYear}`;
-                      
                       setFormData({
                         ...formData,
-                        ticker: fullBondName, // Agora combina com o value do select
+                        ticker: bond.name, // Nome já contém o ano
                         bond_type: bond.name,
                         maturity_date: bond.maturityDate,
                         average_price: '',
