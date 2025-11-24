@@ -51,6 +51,31 @@ interface InvestmentListProps {
 export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) => {
   const [quotes, setQuotes] = useState<{ [key: string]: Quote }>({});
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
+  const [treasuryPrices, setTreasuryPrices] = useState<{ [key: string]: number }>({});
+
+  useEffect(() => {
+    // Buscar preços atuais do Tesouro Direto
+    const fetchTreasuryPrices = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-treasury-bonds");
+        if (error) throw error;
+        
+        if (data?.bonds) {
+          const pricesMap: { [key: string]: number } = {};
+          data.bonds.forEach((bond: any) => {
+            if (bond.sellPrice > 0) {
+              pricesMap[bond.name] = bond.sellPrice;
+            }
+          });
+          setTreasuryPrices(pricesMap);
+        }
+      } catch (error) {
+        console.error("Error fetching treasury prices:", error);
+      }
+    };
+
+    fetchTreasuryPrices();
+  }, []);
 
   // Agrupar investimentos pelo ticker
   const groupedInvestments = investments.reduce((acc, inv) => {
@@ -119,6 +144,60 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
     return { profit, profitPercent };
   };
 
+  const calculateTreasuryValue = (investment: Investment) => {
+    const invested = investment.quantity * investment.average_price;
+    
+    // Usar o preço atual da API se disponível
+    const currentPrice = treasuryPrices[investment.ticker];
+    if (currentPrice && currentPrice > 0) {
+      const currentValue = investment.quantity * currentPrice;
+      const profit = currentValue - invested;
+      const profitPercent = (profit / invested) * 100;
+      return { 
+        invested, 
+        currentValue, 
+        profit, 
+        profitPercent,
+        currentPrice 
+      };
+    }
+    
+    // Fallback: calcular baseado no tempo e taxa se não tiver preço atual
+    if (investment.rate && investment.purchase_date) {
+      const purchaseDate = new Date(investment.purchase_date);
+      const today = new Date();
+      const daysDiff = Math.floor((today.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
+      const years = daysDiff / 365;
+      
+      // Para títulos IPCA+, a taxa informada é apenas a parte acima do IPCA
+      // Vamos assumir IPCA de 4.5% ao ano como estimativa
+      const estimatedIPCA = investment.indexer?.includes('IPCA') ? 4.5 : 0;
+      const totalRate = (investment.rate + estimatedIPCA) / 100;
+      
+      // Cálculo composto: Valor Futuro = Valor Presente * (1 + taxa)^anos
+      const currentValue = invested * Math.pow(1 + totalRate, years);
+      const profit = currentValue - invested;
+      const profitPercent = (profit / invested) * 100;
+      
+      return { 
+        invested, 
+        currentValue, 
+        profit, 
+        profitPercent,
+        currentPrice: null
+      };
+    }
+    
+    // Se não tem dados suficientes, retorna apenas o valor investido
+    return { 
+      invested, 
+      currentValue: invested, 
+      profit: 0, 
+      profitPercent: 0,
+      currentPrice: null
+    };
+  };
+
   // Agrupar investimentos por tipo
   const investmentsByType = groupedInvestments.reduce((acc, inv) => {
     if (!acc[inv.type]) {
@@ -136,27 +215,50 @@ export const InvestmentList = ({ investments, onDelete }: InvestmentListProps) =
             <tr className="border-b">
               <th className="text-left p-3 text-sm font-semibold">Ativo</th>
               <th className="text-right p-3 text-sm font-semibold">Quant.</th>
-              <th className="text-right p-3 text-sm font-semibold">Preço Médio</th>
-              <th className="text-right p-3 text-sm font-semibold">Preço Atual</th>
+              <th className="text-right p-3 text-sm font-semibold">Investido</th>
+              <th className="text-right p-3 text-sm font-semibold">Valor Atual</th>
+              <th className="text-right p-3 text-sm font-semibold">Rendimento</th>
               <th className="text-right p-3 text-sm font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody>
             {investments.map((investment) => {
-              const currentValue = investment.quantity * investment.average_price;
+              const values = calculateTreasuryValue(investment);
+              
               return (
                 <tr key={investment.ticker} className="border-b hover:bg-muted/50">
                   <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
-                        <span className="text-xs">📊</span>
-                      </div>
-                      <span className="font-medium">{investment.ticker}</span>
+                    <div className="space-y-1">
+                      <div className="font-medium">{investment.ticker}</div>
+                      {investment.rate && (
+                        <div className="text-xs text-muted-foreground">
+                          Taxa: {investment.rate}% {investment.indexer ? `+ ${investment.indexer}` : ''}
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className="text-right p-3">{investment.quantity.toFixed(2)}</td>
-                  <td className="text-right p-3">R$ {investment.average_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  <td className="text-right p-3 font-semibold">R$ {currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="text-right p-3">{investment.quantity.toFixed(4)}</td>
+                  <td className="text-right p-3">
+                    R$ {values.invested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="text-right p-3 font-semibold">
+                    <div className="space-y-1">
+                      <div>R$ {values.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      {values.currentPrice && (
+                        <div className="text-xs text-muted-foreground">
+                          PU: R$ {values.currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="text-right p-3">
+                    <span className={values.profit >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                      {values.profit >= 0 ? "+" : ""}R$ {values.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="text-xs">
+                        ({values.profitPercent >= 0 ? "+" : ""}{values.profitPercent.toFixed(2)}%)
+                      </div>
+                    </span>
+                  </td>
                   <td className="text-right p-3">
                     <Button
                       size="sm"
