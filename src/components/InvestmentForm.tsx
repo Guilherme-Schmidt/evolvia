@@ -43,6 +43,15 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
     purchase_date: new Date().toISOString().split("T")[0],
     notes: "",
     broker: "",
+    // Campos para Renda Fixa e Tesouro Direto
+    issuer: "",
+    bond_type: "",
+    indexer: "",
+    rate: "",
+    payment_form: "",
+    maturity_date: "",
+    daily_liquidity: false,
+    total_value: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,29 +65,55 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
 
       if (!user) throw new Error("Usuário não autenticado");
 
-      const ticker = formData.ticker.toUpperCase();
-      const quantity = Number(formData.quantity);
-      const price = Number(formData.average_price);
-      const totalAmount = quantity * price;
+      const isFixedIncome = formData.type === "fixed_income" || formData.type === "treasury";
+      
+      // Para renda fixa, usar total_value ao invés de quantity * price
+      let quantity, price, totalAmount, ticker;
+      
+      if (isFixedIncome) {
+        totalAmount = Number(formData.total_value);
+        quantity = 1; // Para renda fixa, consideramos 1 unidade
+        price = totalAmount;
+        ticker = formData.bond_type || "RENDA_FIXA";
+      } else {
+        ticker = formData.ticker.toUpperCase();
+        quantity = Number(formData.quantity);
+        price = Number(formData.average_price);
+        totalAmount = quantity * price;
+      }
       
       // Garantir formato correto da data (YYYY-MM-DD)
       const transactionDate = formData.purchase_date;
 
       if (transactionType === "buy") {
         // Insert investment
+        const investmentPayload: any = {
+          user_id: user.id,
+          ticker,
+          type: formData.type as any,
+          quantity,
+          average_price: price,
+          target_quantity: formData.target_quantity ? Number(formData.target_quantity) : 0,
+          purchase_date: transactionDate,
+          notes: formData.notes || null,
+          broker: formData.broker || null,
+        };
+
+        // Adicionar campos específicos de renda fixa se aplicável
+        if (isFixedIncome) {
+          investmentPayload.issuer = formData.issuer || null;
+          investmentPayload.bond_type = formData.bond_type || null;
+          investmentPayload.indexer = formData.indexer || null;
+          investmentPayload.rate = formData.rate ? Number(formData.rate) : null;
+          investmentPayload.payment_form = formData.payment_form || null;
+          investmentPayload.maturity_date = formData.maturity_date || null;
+          investmentPayload.daily_liquidity = formData.daily_liquidity;
+          investmentPayload.total_value = totalAmount;
+        }
+
         const { data: investmentData, error: investmentError } = await supabase
           .from("investments")
-          .insert([{
-            user_id: user.id,
-            ticker,
-            type: formData.type as any,
-            quantity,
-            average_price: price,
-            target_quantity: formData.target_quantity ? Number(formData.target_quantity) : 0,
-            purchase_date: transactionDate,
-            notes: formData.notes || null,
-            broker: formData.broker || null,
-          }])
+          .insert([investmentPayload])
           .select()
           .single();
 
@@ -172,6 +207,14 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
         purchase_date: new Date().toISOString().split("T")[0],
         notes: "",
         broker: "",
+        issuer: "",
+        bond_type: "",
+        indexer: "",
+        rate: "",
+        payment_form: "",
+        maturity_date: "",
+        daily_liquidity: false,
+        total_value: "",
       });
       onSuccess();
     } catch (error: any) {
@@ -208,20 +251,9 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ticker">Ticker/Código</Label>
-              <TickerAutocomplete
-                id="ticker"
-                value={formData.ticker}
-                onChange={(value) => setFormData({ ...formData, ticker: value })}
-                placeholder="Ex: PETR4, MXRF11"
-                investmentType={transactionType === "buy" ? formData.type : undefined}
-              />
-            </div>
-
             {transactionType === "buy" && (
               <div className="space-y-2">
-                <Label htmlFor="type">Tipo</Label>
+                <Label htmlFor="type">Tipo de Ativo</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value) =>
@@ -243,50 +275,160 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantidade</Label>
-              <Input
-                id="quantity"
-                type="number"
-                step="0.01"
-                value={formData.quantity}
-                onChange={(e) =>
-                  setFormData({ ...formData, quantity: e.target.value })
-                }
-                placeholder="Ex: 100"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="average_price">{transactionType === "buy" ? "Preço de Compra (R$)" : "Preço de Venda (R$)"}</Label>
-              <Input
-                id="average_price"
-                type="number"
-                step="0.01"
-                value={formData.average_price}
-                onChange={(e) =>
-                  setFormData({ ...formData, average_price: e.target.value })
-                }
-                placeholder="Ex: 25.50"
-                required
-              />
-            </div>
-
-            {transactionType === "buy" && (
+            {/* Campos específicos para Renda Fixa e Tesouro Direto */}
+            {transactionType === "buy" && (formData.type === "fixed_income" || formData.type === "treasury") ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="target_quantity">Meta de Quantidade</Label>
+                  <Label htmlFor="bond_type">Tipo de Título</Label>
+                  <Select
+                    value={formData.bond_type}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, bond_type: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger id="bond_type">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.type === "treasury" ? (
+                        <>
+                          <SelectItem value="Tesouro Selic">Tesouro Selic</SelectItem>
+                          <SelectItem value="Tesouro IPCA+">Tesouro IPCA+</SelectItem>
+                          <SelectItem value="Tesouro Prefixado">Tesouro Prefixado</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="CDB">CDB</SelectItem>
+                          <SelectItem value="LCI">LCI</SelectItem>
+                          <SelectItem value="LCA">LCA</SelectItem>
+                          <SelectItem value="LC">LC</SelectItem>
+                          <SelectItem value="LF">LF</SelectItem>
+                          <SelectItem value="Debênture">Debênture</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="issuer">Emissor</Label>
                   <Input
-                    id="target_quantity"
+                    id="issuer"
+                    value={formData.issuer}
+                    onChange={(e) =>
+                      setFormData({ ...formData, issuer: e.target.value })
+                    }
+                    placeholder="Ex: Banco Inter, Nubank"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="indexer">Indexador</Label>
+                  <Select
+                    value={formData.indexer}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, indexer: value })
+                    }
+                  >
+                    <SelectTrigger id="indexer">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CDI">CDI</SelectItem>
+                      <SelectItem value="IPCA">IPCA</SelectItem>
+                      <SelectItem value="Prefixado">Prefixado</SelectItem>
+                      <SelectItem value="SELIC">SELIC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Taxa do CDI (%)</Label>
+                  <Input
+                    id="rate"
                     type="number"
                     step="0.01"
-                    value={formData.target_quantity}
+                    value={formData.rate}
                     onChange={(e) =>
-                      setFormData({ ...formData, target_quantity: e.target.value })
+                      setFormData({ ...formData, rate: e.target.value })
                     }
-                    placeholder="Ex: 200 (opcional)"
+                    placeholder="Ex: 100 (significa 100% do CDI)"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_form">Forma</Label>
+                  <Select
+                    value={formData.payment_form}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, payment_form: value })
+                    }
+                  >
+                    <SelectTrigger id="payment_form">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pós-fixado">Pós-fixado</SelectItem>
+                      <SelectItem value="Pré-fixado">Pré-fixado</SelectItem>
+                      <SelectItem value="Híbrido">Híbrido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="total_value">Valor em R$</Label>
+                  <Input
+                    id="total_value"
+                    type="number"
+                    step="0.01"
+                    value={formData.total_value}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_value: e.target.value })
+                    }
+                    placeholder="Ex: 10000.00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="purchase_date">Data da Compra</Label>
+                  <Input
+                    id="purchase_date"
+                    type="date"
+                    value={formData.purchase_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purchase_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maturity_date">Data de Vencimento</Label>
+                  <Input
+                    id="maturity_date"
+                    type="date"
+                    value={formData.maturity_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maturity_date: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 flex items-center gap-2 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    id="daily_liquidity"
+                    checked={formData.daily_liquidity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, daily_liquidity: e.target.checked })
+                    }
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="daily_liquidity" className="cursor-pointer">
+                    Liquidez diária
+                  </Label>
                 </div>
 
                 <div className="space-y-2">
@@ -301,20 +443,94 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                   />
                 </div>
               </>
-            )}
+            ) : (
+              /* Campos para Ações, FIIs, ETFs, BDRs, Cripto */
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="ticker">Ticker/Código</Label>
+                  <TickerAutocomplete
+                    id="ticker"
+                    value={formData.ticker}
+                    onChange={(value) => setFormData({ ...formData, ticker: value })}
+                    placeholder="Ex: PETR4, MXRF11"
+                    investmentType={transactionType === "buy" ? formData.type : undefined}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="purchase_date">{transactionType === "buy" ? "Data de Compra" : "Data de Venda"}</Label>
-              <Input
-                id="purchase_date"
-                type="date"
-                value={formData.purchase_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, purchase_date: e.target.value })
-                }
-                required
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantidade</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    step="0.01"
+                    value={formData.quantity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, quantity: e.target.value })
+                    }
+                    placeholder="Ex: 100"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="average_price">{transactionType === "buy" ? "Preço de Compra (R$)" : "Preço de Venda (R$)"}</Label>
+                  <Input
+                    id="average_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.average_price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, average_price: e.target.value })
+                    }
+                    placeholder="Ex: 25.50"
+                    required
+                  />
+                </div>
+
+                {transactionType === "buy" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="target_quantity">Meta de Quantidade</Label>
+                      <Input
+                        id="target_quantity"
+                        type="number"
+                        step="0.01"
+                        value={formData.target_quantity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, target_quantity: e.target.value })
+                        }
+                        placeholder="Ex: 200 (opcional)"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="broker">Corretora</Label>
+                      <Input
+                        id="broker"
+                        value={formData.broker}
+                        onChange={(e) =>
+                          setFormData({ ...formData, broker: e.target.value })
+                        }
+                        placeholder="Ex: Clear, XP, Rico"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="purchase_date">{transactionType === "buy" ? "Data de Compra" : "Data de Venda"}</Label>
+                  <Input
+                    id="purchase_date"
+                    type="date"
+                    value={formData.purchase_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purchase_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="space-y-2">
