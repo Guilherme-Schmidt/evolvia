@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, TrendingUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, TrendingUp, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -48,6 +49,8 @@ export const InvestmentDashboard = () => {
   const [quotes, setQuotes] = useState<{ [key: string]: Quote }>({});
   const [contributions, setContributions] = useState<{ [key: string]: MonthlyContribution[] }>({});
   const [loading, setLoading] = useState(true);
+  const [editingTicker, setEditingTicker] = useState<string | null>(null);
+  const [editingTarget, setEditingTarget] = useState<number>(0);
 
   // Agrupar investimentos pelo ticker
   const groupedInvestments = investments.reduce((acc, inv) => {
@@ -120,10 +123,53 @@ export const InvestmentDashboard = () => {
             regularMarketPrice: result.regularMarketPrice,
           },
         }));
+      } else {
+        // Se não encontrou cotação, marca como não disponível
+        setQuotes((prev) => ({
+          ...prev,
+          [ticker]: {
+            regularMarketPrice: 0,
+          },
+        }));
       }
     } catch (error: any) {
       console.error("Error fetching quote:", error);
+      // Marca como não disponível em caso de erro
+      setQuotes((prev) => ({
+        ...prev,
+        [ticker]: {
+          regularMarketPrice: 0,
+        },
+      }));
     }
+  };
+
+  const handleEditTarget = (ticker: string, currentTarget: number) => {
+    setEditingTicker(ticker);
+    setEditingTarget(currentTarget || 0);
+  };
+
+  const handleSaveTarget = async (ticker: string) => {
+    try {
+      const { error } = await supabase
+        .from("investments")
+        .update({ target_quantity: editingTarget })
+        .eq("ticker", ticker);
+
+      if (error) throw error;
+
+      toast.success("Meta atualizada com sucesso!");
+      setEditingTicker(null);
+      fetchInvestments();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar meta");
+      console.error(error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTicker(null);
+    setEditingTarget(0);
   };
 
   const fetchContributions = async () => {
@@ -276,7 +322,45 @@ export const InvestmentDashboard = () => {
                     </TableCell>
                     <TableCell className="text-right">{investment.quantity}</TableCell>
                     <TableCell className="text-right">
-                      {investment.target_quantity || "-"}
+                      {editingTicker === investment.ticker ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <Input
+                            type="number"
+                            value={editingTarget}
+                            onChange={(e) => setEditingTarget(Number(e.target.value))}
+                            className="w-20 h-8 text-right"
+                            min="0"
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleSaveTarget(investment.ticker)}
+                          >
+                            <Check className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={handleCancelEdit}
+                          >
+                            <X className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <span>{investment.target_quantity || "-"}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleEditTarget(investment.ticker, investment.target_quantity)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -292,13 +376,13 @@ export const InvestmentDashboard = () => {
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {quote ? (
+                      {quote && quote.regularMarketPrice > 0 ? (
                         `R$ ${patrimony.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}`
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground text-xs">Cotação indisponível</span>
                       )}
                     </TableCell>
                     {lastSixMonths.map((month) => {
