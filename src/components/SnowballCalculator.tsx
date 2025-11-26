@@ -19,6 +19,7 @@ export const SnowballCalculator = () => {
     totalInvestment: number;
     monthlyDividends: number;
     totalShares: number;
+    totalInvestmentNeeded: number;
   } | null>(null);
 
   const calculateSnowball = () => {
@@ -39,6 +40,7 @@ export const SnowballCalculator = () => {
     const totalSharesNeeded = Math.ceil(targetIncome / monthlyDividendPerShare);
     const sharesToBuy = Math.max(0, totalSharesNeeded - current);
     const totalInvestment = sharesToBuy * price;
+    const totalInvestmentNeeded = totalSharesNeeded * price;
     const monthlyDividends = totalSharesNeeded * monthlyDividendPerShare;
 
     setResult({
@@ -46,6 +48,7 @@ export const SnowballCalculator = () => {
       totalInvestment,
       monthlyDividends,
       totalShares: totalSharesNeeded,
+      totalInvestmentNeeded,
     });
   };
 
@@ -158,9 +161,16 @@ export const SnowballCalculator = () => {
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center p-3 bg-background rounded-lg">
-                    <span className="text-sm text-muted-foreground">Investimento necessário</span>
+                  <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <span className="text-sm font-medium">Investimento total necessário</span>
                     <span className="text-xl font-bold text-primary">
+                      R$ {result.totalInvestmentNeeded.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-background rounded-lg">
+                    <span className="text-sm text-muted-foreground">Ainda falta investir</span>
+                    <span className="text-lg font-bold">
                       R$ {result.totalInvestment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
