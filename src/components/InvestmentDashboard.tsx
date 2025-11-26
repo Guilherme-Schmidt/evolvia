@@ -22,6 +22,7 @@ interface Investment {
   quantity: number;
   average_price: number;
   target_quantity: number;
+  total_value: number | null;
 }
 
 interface Quote {
@@ -56,10 +57,20 @@ export const InvestmentDashboard = () => {
   const groupedInvestments = investments.reduce((acc, inv) => {
     const existing = acc.find(item => item.ticker === inv.ticker);
     if (existing) {
-      const totalQuantity = existing.quantity + inv.quantity;
-      const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
-      existing.average_price = totalInvested / totalQuantity;
-      existing.quantity = totalQuantity;
+      if (inv.type === "fixed_income" || inv.type === "treasury") {
+        // Para renda fixa, somar total_value
+        const existingValue = existing.total_value || (existing.quantity * existing.average_price);
+        const newValue = inv.total_value || (inv.quantity * inv.average_price);
+        existing.total_value = existingValue + newValue;
+        existing.quantity = 1; // Quantidade não é relevante para renda fixa
+        existing.average_price = existing.total_value;
+      } else {
+        // Para ações, somar quantidade normalmente
+        const totalQuantity = existing.quantity + inv.quantity;
+        const totalInvested = (existing.quantity * existing.average_price) + (inv.quantity * inv.average_price);
+        existing.average_price = totalInvested / totalQuantity;
+        existing.quantity = totalQuantity;
+      }
       // Manter o maior target_quantity
       if (inv.target_quantity > existing.target_quantity) {
         existing.target_quantity = inv.target_quantity;
@@ -222,7 +233,7 @@ export const InvestmentDashboard = () => {
   const getInvestmentValue = (investment: Investment) => {
     // Para renda fixa e tesouro direto, usar total_value diretamente
     if (investment.type === "fixed_income" || investment.type === "treasury") {
-      return investment.quantity * investment.average_price;
+      return investment.total_value || (investment.quantity * investment.average_price);
     }
     
     // Para outros ativos, usar cotação de mercado
@@ -303,7 +314,7 @@ export const InvestmentDashboard = () => {
               <TableRow>
                 <TableHead className="min-w-[100px]">Ativo</TableHead>
                 <TableHead className="min-w-[100px]">Segmento</TableHead>
-                <TableHead className="text-right min-w-[80px]">Qtd Atual</TableHead>
+                <TableHead className="text-right min-w-[120px]">Qtd/Valor Atual</TableHead>
                 <TableHead className="text-right min-w-[80px]">Meta</TableHead>
                 <TableHead className="min-w-[150px]">Progresso</TableHead>
                 <TableHead className="text-right min-w-[80px]">% Carteira</TableHead>
@@ -327,7 +338,18 @@ export const InvestmentDashboard = () => {
                     <TableCell className="text-sm text-muted-foreground">
                       {typeLabels[investment.type] || investment.type}
                     </TableCell>
-                    <TableCell className="text-right">{investment.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      {investment.type === "fixed_income" || investment.type === "treasury" ? (
+                        <span className="text-sm">
+                          R$ {(investment.total_value || (investment.quantity * investment.average_price)).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      ) : (
+                        investment.quantity
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       {editingTicker === investment.ticker ? (
                         <div className="flex items-center justify-end gap-2">
