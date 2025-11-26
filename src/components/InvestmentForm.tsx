@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +32,18 @@ interface InvestmentFormProps {
   onSuccess: () => void;
 }
 
+interface BrokerAccount {
+  id: string;
+  broker_name: string;
+  account_balance: number;
+}
+
 export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
   const [loading, setLoading] = useState(false);
   const [transactionType, setTransactionType] = useState<"buy" | "sell">("buy");
   const [sellingAssetType, setSellingAssetType] = useState<string | null>(null);
+  const [brokerAccounts, setBrokerAccounts] = useState<BrokerAccount[]>([]);
+  const [selectedBrokerAccount, setSelectedBrokerAccount] = useState<string>("");
   const [formData, setFormData] = useState({
     ticker: "",
     type: "",
@@ -55,6 +63,24 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
     daily_liquidity: false,
     total_value: "",
   });
+
+  useEffect(() => {
+    fetchBrokerAccounts();
+  }, []);
+
+  const fetchBrokerAccounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("broker_accounts")
+        .select("*")
+        .order("broker_name", { ascending: true });
+
+      if (error) throw error;
+      setBrokerAccounts(data || []);
+    } catch (error: any) {
+      console.error("Error fetching broker accounts:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +174,15 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
       const transactionDate = formData.purchase_date;
 
       if (transactionType === "buy") {
+        // Verificar saldo da corretora se uma conta foi selecionada
+        if (selectedBrokerAccount) {
+          const account = brokerAccounts.find(acc => acc.id === selectedBrokerAccount);
+          if (account && account.account_balance < totalAmount) {
+            toast.error(`Saldo insuficiente na corretora. Disponível: R$ ${account.account_balance.toFixed(2)}`);
+            return;
+          }
+        }
+
         // Insert investment
         const investmentPayload: any = {
           user_id: user.id,
@@ -159,6 +194,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
           purchase_date: transactionDate,
           notes: formData.notes || null,
           broker: formData.broker || null,
+          broker_account_id: selectedBrokerAccount || null,
         };
 
         // Adicionar campos específicos de renda fixa se aplicável
@@ -193,9 +229,24 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             total_amount: totalAmount,
             transaction_date: transactionDate,
             notes: formData.notes || null,
+            broker_account_id: selectedBrokerAccount || null,
           }]);
 
         if (transactionError) throw transactionError;
+
+        // Deduzir o valor da conta de corretora se uma foi selecionada
+        if (selectedBrokerAccount) {
+          const account = brokerAccounts.find(acc => acc.id === selectedBrokerAccount);
+          if (account) {
+            const { error: updateError } = await supabase
+              .from("broker_accounts")
+              .update({ account_balance: account.account_balance - totalAmount })
+              .eq("id", selectedBrokerAccount);
+
+            if (updateError) throw updateError;
+          }
+        }
+
         toast.success("Compra registrada com sucesso!");
       } else {
         // Handle sell
@@ -236,9 +287,23 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               total_amount: valueToSell,
               transaction_date: transactionDate,
               notes: formData.notes || null,
+              broker_account_id: selectedBrokerAccount || null,
             }]);
 
           if (transactionError) throw transactionError;
+
+          // Adicionar o valor à conta de corretora se uma foi selecionada
+          if (selectedBrokerAccount) {
+            const account = brokerAccounts.find(acc => acc.id === selectedBrokerAccount);
+            if (account) {
+              const { error: updateError } = await supabase
+                .from("broker_accounts")
+                .update({ account_balance: account.account_balance + valueToSell })
+                .eq("id", selectedBrokerAccount);
+
+              if (updateError) throw updateError;
+            }
+          }
 
           // Update investment values (FIFO - First In First Out)
           let remainingValueToSell = valueToSell;
@@ -290,9 +355,23 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               total_amount: totalAmount,
               transaction_date: transactionDate,
               notes: formData.notes || null,
+              broker_account_id: selectedBrokerAccount || null,
             }]);
 
           if (transactionError) throw transactionError;
+
+          // Adicionar o valor à conta de corretora se uma foi selecionada
+          if (selectedBrokerAccount) {
+            const account = brokerAccounts.find(acc => acc.id === selectedBrokerAccount);
+            if (account) {
+              const { error: updateError } = await supabase
+                .from("broker_accounts")
+                .update({ account_balance: account.account_balance + totalAmount })
+                .eq("id", selectedBrokerAccount);
+
+              if (updateError) throw updateError;
+            }
+          }
 
           // Update investment quantities (FIFO - First In First Out)
           let remainingToSell = quantity;
@@ -364,6 +443,7 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
               onValueChange={(value: "buy" | "sell") => {
                 setTransactionType(value);
                 setSellingAssetType(null);
+                setSelectedBrokerAccount("");
                 // Limpar campos ao mudar tipo de transação
                 setFormData({
                   ...formData,
@@ -802,9 +882,37 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
                         placeholder="Ex: 100"
                         required
                       />
-                    </div>
+          </div>
 
-                    <div className="space-y-2">
+          {/* Seleção de Conta de Corretora */}
+          {brokerAccounts.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="broker_account">Conta de Corretora (opcional)</Label>
+              <Select
+                value={selectedBrokerAccount}
+                onValueChange={setSelectedBrokerAccount}
+              >
+                <SelectTrigger id="broker_account">
+                  <SelectValue placeholder="Selecione uma conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {brokerAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.broker_name} - R$ {account.account_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {transactionType === "buy" 
+                  ? "Ao selecionar uma conta, o valor da compra será deduzido do saldo" 
+                  : "Ao selecionar uma conta, o valor da venda será adicionado ao saldo"}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2">
                       <Label htmlFor="average_price">{transactionType === "buy" ? "Preço de Compra (R$)" : "Preço de Venda (R$)"}</Label>
                       <Input
                         id="average_price"

@@ -218,23 +218,31 @@ export const InvestmentDashboard = () => {
     return Math.min((current / target) * 100, 100);
   };
 
+
+  const getInvestmentValue = (investment: Investment) => {
+    // Para renda fixa e tesouro direto, usar total_value diretamente
+    if (investment.type === "fixed_income" || investment.type === "treasury") {
+      return investment.quantity * investment.average_price;
+    }
+    
+    // Para outros ativos, usar cotação de mercado
+    const quote = quotes[investment.ticker];
+    if (!quote || quote.regularMarketPrice === 0) return 0;
+    
+    return investment.quantity * quote.regularMarketPrice;
+  };
+
   const getTotalPortfolioValue = () => {
     return groupedInvestments.reduce((total, inv) => {
-      const quote = quotes[inv.ticker];
-      if (quote) {
-        return total + inv.quantity * quote.regularMarketPrice;
-      }
-      return total;
+      return total + getInvestmentValue(inv);
     }, 0);
   };
 
   const getInvestmentPercentage = (investment: Investment) => {
-    const quote = quotes[investment.ticker];
-    if (!quote) return 0;
+    const investmentValue = getInvestmentValue(investment);
+    if (investmentValue === 0) return 0;
     
-    const investmentValue = investment.quantity * quote.regularMarketPrice;
     const totalValue = getTotalPortfolioValue();
-    
     return totalValue > 0 ? (investmentValue / totalValue) * 100 : 0;
   };
 
@@ -309,10 +317,9 @@ export const InvestmentDashboard = () => {
             </TableHeader>
             <TableBody>
               {groupedInvestments.map((investment) => {
-                const quote = quotes[investment.ticker];
                 const progress = calculateProgress(investment.quantity, investment.target_quantity);
                 const percentage = getInvestmentPercentage(investment);
-                const patrimony = quote ? investment.quantity * quote.regularMarketPrice : 0;
+                const patrimony = getInvestmentValue(investment);
 
                 return (
                   <TableRow key={investment.ticker}>
@@ -376,13 +383,13 @@ export const InvestmentDashboard = () => {
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {quote && quote.regularMarketPrice > 0 ? (
+                      {patrimony > 0 ? (
                         `R$ ${patrimony.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}`
                       ) : (
-                        <span className="text-muted-foreground text-xs">Cotação indisponível</span>
+                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </TableCell>
                     {lastSixMonths.map((month) => {
