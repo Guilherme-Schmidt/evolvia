@@ -3,10 +3,21 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class ApiClient {
   private token: string | null = null;
+  private authListeners: Array<(event: string, session: any) => void> = [];
 
   constructor() {
     // Carregar token do localStorage
     this.token = localStorage.getItem('auth_token');
+  }
+
+  private notifyAuthListeners(event: string, session: any) {
+    this.authListeners.forEach(listener => {
+      try {
+        listener(event, session);
+      } catch (error) {
+        console.error('Error in auth listener:', error);
+      }
+    });
   }
 
   private getHeaders(): HeadersInit {
@@ -67,6 +78,14 @@ class ApiClient {
         this.token = result.data.token;
         localStorage.setItem('auth_token', result.data.token);
 
+        const sessionData = {
+          user: result.data.user,
+          access_token: result.data.token
+        };
+
+        // Notificar listeners sobre registro
+        setTimeout(() => this.notifyAuthListeners('SIGNED_IN', sessionData), 0);
+
         // Retornar estrutura compatível com Supabase
         return {
           data: {
@@ -93,6 +112,14 @@ class ApiClient {
         this.token = result.data.token;
         localStorage.setItem('auth_token', result.data.token);
 
+        const sessionData = {
+          user: result.data.user,
+          access_token: result.data.token
+        };
+
+        // Notificar listeners sobre login
+        setTimeout(() => this.notifyAuthListeners('SIGNED_IN', sessionData), 0);
+
         // Retornar estrutura compatível com Supabase
         return {
           data: {
@@ -110,6 +137,10 @@ class ApiClient {
       await this.request('/auth/logout', { method: 'POST' });
       this.token = null;
       localStorage.removeItem('auth_token');
+
+      // Notificar listeners sobre logout
+      this.notifyAuthListeners('SIGNED_OUT', null);
+
       return { error: null };
     },
 
@@ -128,22 +159,37 @@ class ApiClient {
     },
 
     onAuthStateChange: (callback: (event: string, session: any) => void) => {
-      // Implementação simplificada - apenas verifica se há token
+      // Adicionar callback à lista de listeners
+      this.authListeners.push(callback);
+
+      // Verificar estado inicial assíncronamente
       const token = localStorage.getItem('auth_token');
       if (token) {
         this.token = token;
-        callback('SIGNED_IN', { user: { token } });
-      } else {
-        callback('SIGNED_OUT', null);
+        setTimeout(() => callback('SIGNED_IN', { user: { token } }), 0);
       }
 
       // Retorna função de cleanup
       return {
         data: {
           subscription: {
-            unsubscribe: () => {},
+            unsubscribe: () => {
+              // Remover listener
+              const index = this.authListeners.indexOf(callback);
+              if (index > -1) {
+                this.authListeners.splice(index, 1);
+              }
+            },
           },
         },
+      };
+    },
+
+    signInWithOAuth: async (options: any) => {
+      // OAuth não suportado ainda
+      return {
+        data: { user: null, session: null },
+        error: new Error('OAuth não implementado. Use login com email e senha.')
       };
     },
   };
