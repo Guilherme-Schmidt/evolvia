@@ -37,7 +37,11 @@ export const DividendsManager = ({ investments }: Props) => {
     type: "Dividendo",
   });
 
-  const uniqueTickers = Array.from(new Set(investments.map(inv => inv.ticker)));
+  const uniqueTickers = Array.from(new Set(
+    investments
+      .map((inv) => inv.ticker)
+      .filter((ticker) => ticker && ticker.trim() !== "")
+  ));
 
   const fetchDividends = async () => {
     try {
