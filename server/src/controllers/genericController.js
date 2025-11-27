@@ -5,10 +5,84 @@ export const createGenericController = (tableName, userIdField = 'user_id') => {
   return {
     getAll: async (req, res) => {
       try {
-        const result = await query(
-          `SELECT * FROM ${tableName} WHERE ${userIdField} = $1 ORDER BY created_at DESC`,
-          [req.user.id]
-        );
+        const { limit, offset, order, ascending, ...filters } = req.query;
+
+        let queryText = `SELECT * FROM ${tableName} WHERE ${userIdField} = $1`;
+        const params = [req.user.id];
+        let paramIndex = 2;
+
+        // Processar filtros
+        Object.keys(filters).forEach((key) => {
+          const value = filters[key];
+
+          // Detectar operadores especiais
+          if (key.endsWith('_in')) {
+            const field = key.replace('_in', '');
+            const values = value.split(',');
+            queryText += ` AND ${field} = ANY($${paramIndex})`;
+            params.push(values);
+            paramIndex++;
+          } else if (key.endsWith('_gte')) {
+            const field = key.replace('_gte', '');
+            queryText += ` AND ${field} >= $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          } else if (key.endsWith('_lte')) {
+            const field = key.replace('_lte', '');
+            queryText += ` AND ${field} <= $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          } else if (key.endsWith('_gt')) {
+            const field = key.replace('_gt', '');
+            queryText += ` AND ${field} > $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          } else if (key.endsWith('_lt')) {
+            const field = key.replace('_lt', '');
+            queryText += ` AND ${field} < $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          } else if (key.endsWith('_neq')) {
+            const field = key.replace('_neq', '');
+            queryText += ` AND ${field} != $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          } else if (key.endsWith('_is')) {
+            const field = key.replace('_is', '');
+            if (value === 'null') {
+              queryText += ` AND ${field} IS NULL`;
+            } else {
+              queryText += ` AND ${field} IS NOT NULL`;
+            }
+          } else {
+            // Filtro simples de igualdade
+            queryText += ` AND ${key} = $${paramIndex}`;
+            params.push(value);
+            paramIndex++;
+          }
+        });
+
+        // Ordenação
+        if (order) {
+          const orderDir = ascending === 'false' ? 'DESC' : 'ASC';
+          queryText += ` ORDER BY ${order} ${orderDir}`;
+        } else {
+          queryText += ` ORDER BY created_at DESC`;
+        }
+
+        // Paginação
+        if (limit) {
+          queryText += ` LIMIT $${paramIndex}`;
+          params.push(parseInt(limit));
+          paramIndex++;
+        }
+
+        if (offset) {
+          queryText += ` OFFSET $${paramIndex}`;
+          params.push(parseInt(offset));
+        }
+
+        const result = await query(queryText, params);
 
         res.json({ data: result.rows });
       } catch (error) {

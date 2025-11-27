@@ -219,9 +219,11 @@ class QueryBuilder {
   private orderAscending: boolean = true;
   private limitValue: number | null = null;
   private offsetValue: number | null = null;
+  private singleResult: boolean = false;
 
   constructor(table: string, client: ApiClient) {
-    this.table = table;
+    // Normalizar nome da tabela: converter underscores para hífens
+    this.table = table.replace(/_/g, '-');
     this.client = client;
   }
 
@@ -235,8 +237,43 @@ class QueryBuilder {
     return this;
   }
 
+  neq(field: string, value: any) {
+    this.filters.push({ field, operator: 'neq', value });
+    return this;
+  }
+
+  gt(field: string, value: any) {
+    this.filters.push({ field, operator: 'gt', value });
+    return this;
+  }
+
+  gte(field: string, value: any) {
+    this.filters.push({ field, operator: 'gte', value });
+    return this;
+  }
+
+  lt(field: string, value: any) {
+    this.filters.push({ field, operator: 'lt', value });
+    return this;
+  }
+
+  lte(field: string, value: any) {
+    this.filters.push({ field, operator: 'lte', value });
+    return this;
+  }
+
   in(field: string, values: any[]) {
     this.filters.push({ field, operator: 'in', value: values });
+    return this;
+  }
+
+  not(field: string, operator: string, value: any) {
+    this.filters.push({ field, operator: `not.${operator}`, value });
+    return this;
+  }
+
+  is(field: string, value: any) {
+    this.filters.push({ field, operator: 'is', value });
     return this;
   }
 
@@ -256,6 +293,18 @@ class QueryBuilder {
     return this;
   }
 
+  single() {
+    this.singleResult = true;
+    this.limitValue = 1;
+    return this;
+  }
+
+  maybeSingle() {
+    this.singleResult = true;
+    this.limitValue = 1;
+    return this;
+  }
+
   private buildQueryParams(): string {
     const params = new URLSearchParams();
 
@@ -264,6 +313,11 @@ class QueryBuilder {
         params.append(filter.field, filter.value);
       } else if (filter.operator === 'in') {
         params.append(`${filter.field}_in`, filter.value.join(','));
+      } else if (['neq', 'gt', 'gte', 'lt', 'lte', 'is'].includes(filter.operator)) {
+        params.append(`${filter.field}_${filter.operator}`, filter.value);
+      } else if (filter.operator.startsWith('not.')) {
+        const op = filter.operator.replace('not.', '');
+        params.append(`${filter.field}_not_${op}`, filter.value);
       }
     });
 
@@ -289,6 +343,12 @@ class QueryBuilder {
       const endpoint = `/${this.table}${queryParams ? `?${queryParams}` : ''}`;
 
       const result = await this.client['request'](endpoint);
+
+      // Se single() foi chamado, retornar apenas o primeiro resultado
+      if (this.singleResult && result.data && Array.isArray(result.data)) {
+        result.data = result.data.length > 0 ? result.data[0] : null;
+      }
+
       resolve(result);
     } catch (error) {
       if (reject) {
