@@ -889,14 +889,14 @@ export const InvestmentForm = ({ onSuccess }: InvestmentFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="broker_account">Conta de Corretora (opcional)</Label>
               <Select
-                value={selectedBrokerAccount}
-                onValueChange={setSelectedBrokerAccount}
+                value={selectedBrokerAccount || "none"}
+                onValueChange={(value) => setSelectedBrokerAccount(value === "none" ? "" : value)}
               >
                 <SelectTrigger id="broker_account">
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {brokerAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.broker_name} - R$ {account.account_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
