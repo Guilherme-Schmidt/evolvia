@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 type Theme = "light" | "dark";
 
@@ -10,46 +9,26 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const THEME_STORAGE_KEY = "evolvia-theme";
+
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Carregar tema do localStorage
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return (savedTheme as Theme) || "light";
+  });
 
   useEffect(() => {
-    const loadTheme = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("theme")
-          .eq("user_id", user.id)
-          .single();
-        
-        if (data?.theme) {
-          setTheme(data.theme as Theme);
-          document.documentElement.classList.toggle("dark", data.theme === "dark");
-        }
-      }
-      setLoading(false);
-    };
-
-    loadTheme();
+    // Aplicar tema ao carregar
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, []);
 
-  const toggleTheme = async () => {
+  const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ theme: newTheme })
-        .eq("user_id", user.id);
-    }
+    localStorage.setItem(THEME_STORAGE_KEY, newTheme);
   };
-
-  if (loading) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

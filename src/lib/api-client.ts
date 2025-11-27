@@ -66,9 +66,18 @@ class ApiClient {
       if (result.data) {
         this.token = result.data.token;
         localStorage.setItem('auth_token', result.data.token);
+
+        // Retornar estrutura compatível com Supabase
+        return {
+          data: {
+            user: result.data.user,
+            session: { access_token: result.data.token }
+          },
+          error: null
+        };
       }
 
-      return result;
+      return { data: { user: null, session: null }, error: result.error };
     },
 
     signInWithPassword: async (credentials: { email: string; password: string }) => {
@@ -83,9 +92,18 @@ class ApiClient {
       if (result.data) {
         this.token = result.data.token;
         localStorage.setItem('auth_token', result.data.token);
+
+        // Retornar estrutura compatível com Supabase
+        return {
+          data: {
+            user: result.data.user,
+            session: { access_token: result.data.token }
+          },
+          error: null
+        };
       }
 
-      return result;
+      return { data: { user: null, session: null }, error: result.error };
     },
 
     signOut: async () => {
@@ -96,7 +114,17 @@ class ApiClient {
     },
 
     getUser: async () => {
-      return this.request<{ user: any }>('/auth/user');
+      if (!this.token) {
+        return { data: { user: null }, error: null };
+      }
+
+      const result = await this.request<{ user: any }>('/auth/user');
+
+      if (result.error) {
+        return { data: { user: null }, error: result.error };
+      }
+
+      return { data: { user: result.data?.user || null }, error: null };
     },
 
     onAuthStateChange: (callback: (event: string, session: any) => void) => {
@@ -209,7 +237,7 @@ class QueryBuilder {
     return params.toString();
   }
 
-  async then(resolve: any, reject: any) {
+  async then(resolve: any, reject?: any) {
     try {
       const queryParams = this.buildQueryParams();
       const endpoint = `/${this.table}${queryParams ? `?${queryParams}` : ''}`;
@@ -217,16 +245,26 @@ class QueryBuilder {
       const result = await this.client['request'](endpoint);
       resolve(result);
     } catch (error) {
-      reject(error);
+      if (reject) {
+        reject(error);
+      } else {
+        throw error;
+      }
     }
   }
 
   async insert(data: any) {
     const endpoint = `/${this.table}`;
-    return this.client['request'](endpoint, {
+    const result = await this.client['request'](endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
     });
+
+    // Retornar estrutura compatível com Supabase
+    return {
+      data: result.data ? [result.data] : null,
+      error: result.error
+    };
   }
 
   async update(data: any) {
