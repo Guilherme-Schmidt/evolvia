@@ -19,6 +19,21 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX idx_users_email ON users(email);
 
 -- =============================================================================
+-- PROFILES TABLE (dados adicionais do usuário)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  birth_date DATE,
+  location TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_profiles_id ON profiles(id);
+
+-- =============================================================================
 -- ENUMS
 -- =============================================================================
 
@@ -78,6 +93,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   credit_card_id UUID,
   installments INTEGER,
   current_installment INTEGER,
+  parent_transaction_id UUID,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -97,6 +113,7 @@ CREATE TABLE IF NOT EXISTS credit_cards (
   credit_limit NUMERIC(10, 2) NOT NULL DEFAULT 0,
   closing_day INTEGER NOT NULL,
   due_day INTEGER NOT NULL,
+  color TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -139,6 +156,8 @@ CREATE TABLE IF NOT EXISTS financial_goals (
   current_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   deadline DATE,
   description TEXT,
+  category TEXT,
+  status TEXT DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -300,5 +319,10 @@ CREATE TRIGGER update_dividends_updated_at
 
 CREATE TRIGGER update_treasury_bonds_updated_at
   BEFORE UPDATE ON treasury_bonds
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_profiles_updated_at
+  BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
