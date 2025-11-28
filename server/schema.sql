@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- =============================================================================
 -- PROFILES TABLE (dados adicionais do usuário)
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_profiles_id ON profiles(id);
+CREATE INDEX IF NOT EXISTS idx_profiles_id ON profiles(id);
 
 -- =============================================================================
 -- ENUMS
@@ -98,9 +98,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_date ON transactions(date);
-CREATE INDEX idx_transactions_type ON transactions(type);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
 
 -- =============================================================================
 -- CREDIT CARDS
@@ -118,12 +118,19 @@ CREATE TABLE IF NOT EXISTS credit_cards (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_credit_cards_user_id ON credit_cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_cards_user_id ON credit_cards(user_id);
 
 -- Add foreign key for transactions
-ALTER TABLE transactions
-  ADD CONSTRAINT fk_transactions_credit_card
-  FOREIGN KEY (credit_card_id) REFERENCES credit_cards(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_transactions_credit_card'
+  ) THEN
+    ALTER TABLE transactions
+      ADD CONSTRAINT fk_transactions_credit_card
+      FOREIGN KEY (credit_card_id) REFERENCES credit_cards(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- BUDGETS
@@ -141,8 +148,8 @@ CREATE TABLE IF NOT EXISTS budgets (
   UNIQUE(user_id, category, month, year)
 );
 
-CREATE INDEX idx_budgets_user_id ON budgets(user_id);
-CREATE INDEX idx_budgets_month_year ON budgets(month, year);
+CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_month_year ON budgets(month, year);
 
 -- =============================================================================
 -- FINANCIAL GOALS
@@ -162,7 +169,7 @@ CREATE TABLE IF NOT EXISTS financial_goals (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_financial_goals_user_id ON financial_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_financial_goals_user_id ON financial_goals(user_id);
 
 -- =============================================================================
 -- BROKER ACCOUNTS
@@ -177,7 +184,7 @@ CREATE TABLE IF NOT EXISTS broker_accounts (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_broker_accounts_user_id ON broker_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_broker_accounts_user_id ON broker_accounts(user_id);
 
 -- =============================================================================
 -- INVESTMENTS
@@ -197,8 +204,8 @@ CREATE TABLE IF NOT EXISTS investments (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_investments_user_id ON investments(user_id);
-CREATE INDEX idx_investments_ticker ON investments(ticker);
+CREATE INDEX IF NOT EXISTS idx_investments_user_id ON investments(user_id);
+CREATE INDEX IF NOT EXISTS idx_investments_ticker ON investments(ticker);
 
 -- =============================================================================
 -- INVESTMENT TRANSACTIONS
@@ -217,8 +224,8 @@ CREATE TABLE IF NOT EXISTS investment_transactions (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_investment_transactions_investment_id ON investment_transactions(investment_id);
-CREATE INDEX idx_investment_transactions_date ON investment_transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_investment_transactions_investment_id ON investment_transactions(investment_id);
+CREATE INDEX IF NOT EXISTS idx_investment_transactions_date ON investment_transactions(transaction_date);
 
 -- =============================================================================
 -- DIVIDENDS
@@ -237,9 +244,9 @@ CREATE TABLE IF NOT EXISTS dividends (
   UNIQUE(user_id, ticker, payment_date)
 );
 
-CREATE INDEX idx_dividends_user_id ON dividends(user_id);
-CREATE INDEX idx_dividends_ticker ON dividends(ticker);
-CREATE INDEX idx_dividends_payment_date ON dividends(payment_date);
+CREATE INDEX IF NOT EXISTS idx_dividends_user_id ON dividends(user_id);
+CREATE INDEX IF NOT EXISTS idx_dividends_ticker ON dividends(ticker);
+CREATE INDEX IF NOT EXISTS idx_dividends_payment_date ON dividends(payment_date);
 
 -- =============================================================================
 -- TREASURY BONDS
@@ -258,7 +265,7 @@ CREATE TABLE IF NOT EXISTS treasury_bonds (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_treasury_bonds_user_id ON treasury_bonds(user_id);
+CREATE INDEX IF NOT EXISTS idx_treasury_bonds_user_id ON treasury_bonds(user_id);
 
 -- =============================================================================
 -- TRIGGERS FOR updated_at
@@ -272,56 +279,67 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_transactions_updated_at ON transactions;
 CREATE TRIGGER update_transactions_updated_at
   BEFORE UPDATE ON transactions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_credit_cards_updated_at ON credit_cards;
 CREATE TRIGGER update_credit_cards_updated_at
   BEFORE UPDATE ON credit_cards
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_budgets_updated_at ON budgets;
 CREATE TRIGGER update_budgets_updated_at
   BEFORE UPDATE ON budgets
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_financial_goals_updated_at ON financial_goals;
 CREATE TRIGGER update_financial_goals_updated_at
   BEFORE UPDATE ON financial_goals
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_broker_accounts_updated_at ON broker_accounts;
 CREATE TRIGGER update_broker_accounts_updated_at
   BEFORE UPDATE ON broker_accounts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_investments_updated_at ON investments;
 CREATE TRIGGER update_investments_updated_at
   BEFORE UPDATE ON investments
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_investment_transactions_updated_at ON investment_transactions;
 CREATE TRIGGER update_investment_transactions_updated_at
   BEFORE UPDATE ON investment_transactions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_dividends_updated_at ON dividends;
 CREATE TRIGGER update_dividends_updated_at
   BEFORE UPDATE ON dividends
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_treasury_bonds_updated_at ON treasury_bonds;
 CREATE TRIGGER update_treasury_bonds_updated_at
   BEFORE UPDATE ON treasury_bonds
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
