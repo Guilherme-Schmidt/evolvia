@@ -256,6 +256,15 @@ class QueryBuilder {
     return this;
   }
 
+  range(from: number, to: number) {
+    // range(0, 9) = primeiros 10 itens (limit 10, offset 0)
+    // range(10, 19) = próximos 10 itens (limit 10, offset 10)
+    const limit = to - from + 1;
+    this.limitValue = limit;
+    this.offsetValue = from;
+    return this;
+  }
+
   private buildQueryParams(): string {
     const params = new URLSearchParams();
 
