@@ -5,12 +5,115 @@ export const createGenericController = (tableName, userIdField = 'user_id') => {
   return {
     getAll: async (req, res) => {
       try {
-        const result = await query(
-          `SELECT * FROM ${tableName} WHERE ${userIdField} = $1 ORDER BY created_at DESC`,
-          [req.user.id]
-        );
+        // Construir query dinamicamente baseado nos parâmetros
+        let queryText = `SELECT * FROM ${tableName} WHERE ${userIdField} = $1`;
+        const queryParams = [req.user.id];
+        let paramCounter = 2;
 
-        res.json({ data: result.rows });
+        // Processar filtros da query string
+        Object.keys(req.query).forEach(key => {
+          const value = req.query[key];
+
+          // Ignorar parâmetros especiais
+          if (['order', 'ascending', 'limit', 'offset', 'single'].includes(key)) {
+            return;
+          }
+
+          // Processar operadores
+          if (key.endsWith('_neq')) {
+            const field = key.replace('_neq', '');
+            queryText += ` AND ${field} != $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.endsWith('_gt')) {
+            const field = key.replace('_gt', '');
+            queryText += ` AND ${field} > $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.endsWith('_gte')) {
+            const field = key.replace('_gte', '');
+            queryText += ` AND ${field} >= $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.endsWith('_lt')) {
+            const field = key.replace('_lt', '');
+            queryText += ` AND ${field} < $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.endsWith('_lte')) {
+            const field = key.replace('_lte', '');
+            queryText += ` AND ${field} <= $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.endsWith('_in')) {
+            const field = key.replace('_in', '');
+            const values = value.split(',');
+            const placeholders = values.map((_, i) => `$${paramCounter + i}`).join(', ');
+            queryText += ` AND ${field} IN (${placeholders})`;
+            queryParams.push(...values);
+            paramCounter += values.length;
+          } else if (key.endsWith('_is')) {
+            const field = key.replace('_is', '');
+            if (value === 'null') {
+              queryText += ` AND ${field} IS NULL`;
+            } else {
+              queryText += ` AND ${field} IS NOT NULL`;
+            }
+          } else if (key.endsWith('_ilike')) {
+            const field = key.replace('_ilike', '');
+            queryText += ` AND ${field} ILIKE $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          } else if (key.includes('_not_')) {
+            const parts = key.split('_not_');
+            const field = parts[0];
+            const operator = parts[1];
+            if (operator === 'eq') {
+              queryText += ` AND ${field} != $${paramCounter}`;
+            } else if (operator === 'is') {
+              if (value === 'null') {
+                queryText += ` AND ${field} IS NOT NULL`;
+              }
+            }
+            queryParams.push(value);
+            paramCounter++;
+          } else {
+            // Filtro simples de igualdade
+            queryText += ` AND ${key} = $${paramCounter}`;
+            queryParams.push(value);
+            paramCounter++;
+          }
+        });
+
+        // Ordenação
+        if (req.query.order) {
+          const ascending = req.query.ascending === 'true';
+          queryText += ` ORDER BY ${req.query.order} ${ascending ? 'ASC' : 'DESC'}`;
+        } else {
+          queryText += ` ORDER BY created_at DESC`;
+        }
+
+        // Limit e Offset
+        if (req.query.limit) {
+          queryText += ` LIMIT $${paramCounter}`;
+          queryParams.push(parseInt(req.query.limit));
+          paramCounter++;
+        }
+
+        if (req.query.offset) {
+          queryText += ` OFFSET $${paramCounter}`;
+          queryParams.push(parseInt(req.query.offset));
+          paramCounter++;
+        }
+
+        const result = await query(queryText, queryParams);
+
+        // Se single mode, retornar apenas o primeiro resultado
+        if (req.query.single === 'true') {
+          res.json({ data: result.rows.length > 0 ? result.rows[0] : null });
+        } else {
+          res.json({ data: result.rows });
+        }
       } catch (error) {
         console.error(`Erro ao buscar ${tableName}:`, error);
         res.status(500).json({ error: `Erro ao buscar ${tableName}` });

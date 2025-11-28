@@ -173,6 +173,7 @@ class QueryBuilder {
   private orderAscending: boolean = true;
   private limitValue: number | null = null;
   private offsetValue: number | null = null;
+  private singleMode: boolean = false;
 
   constructor(table: string, client: ApiClient) {
     this.table = table;
@@ -189,8 +190,48 @@ class QueryBuilder {
     return this;
   }
 
+  neq(field: string, value: any) {
+    this.filters.push({ field, operator: 'neq', value });
+    return this;
+  }
+
+  gt(field: string, value: any) {
+    this.filters.push({ field, operator: 'gt', value });
+    return this;
+  }
+
+  gte(field: string, value: any) {
+    this.filters.push({ field, operator: 'gte', value });
+    return this;
+  }
+
+  lt(field: string, value: any) {
+    this.filters.push({ field, operator: 'lt', value });
+    return this;
+  }
+
+  lte(field: string, value: any) {
+    this.filters.push({ field, operator: 'lte', value });
+    return this;
+  }
+
   in(field: string, values: any[]) {
     this.filters.push({ field, operator: 'in', value: values });
+    return this;
+  }
+
+  not(field: string, operator: string, value: any) {
+    this.filters.push({ field, operator: 'not', value: { operator, value } });
+    return this;
+  }
+
+  is(field: string, value: null | boolean) {
+    this.filters.push({ field, operator: 'is', value });
+    return this;
+  }
+
+  ilike(field: string, pattern: string) {
+    this.filters.push({ field, operator: 'ilike', value: pattern });
     return this;
   }
 
@@ -210,14 +251,35 @@ class QueryBuilder {
     return this;
   }
 
+  single() {
+    this.singleMode = true;
+    return this;
+  }
+
   private buildQueryParams(): string {
     const params = new URLSearchParams();
 
     this.filters.forEach((filter) => {
       if (filter.operator === 'eq') {
         params.append(filter.field, filter.value);
+      } else if (filter.operator === 'neq') {
+        params.append(`${filter.field}_neq`, filter.value);
+      } else if (filter.operator === 'gt') {
+        params.append(`${filter.field}_gt`, filter.value);
+      } else if (filter.operator === 'gte') {
+        params.append(`${filter.field}_gte`, filter.value);
+      } else if (filter.operator === 'lt') {
+        params.append(`${filter.field}_lt`, filter.value);
+      } else if (filter.operator === 'lte') {
+        params.append(`${filter.field}_lte`, filter.value);
       } else if (filter.operator === 'in') {
         params.append(`${filter.field}_in`, filter.value.join(','));
+      } else if (filter.operator === 'not') {
+        params.append(`${filter.field}_not_${filter.value.operator}`, filter.value.value);
+      } else if (filter.operator === 'is') {
+        params.append(`${filter.field}_is`, filter.value === null ? 'null' : filter.value.toString());
+      } else if (filter.operator === 'ilike') {
+        params.append(`${filter.field}_ilike`, filter.value);
       }
     });
 
@@ -234,6 +296,10 @@ class QueryBuilder {
       params.append('offset', this.offsetValue.toString());
     }
 
+    if (this.singleMode) {
+      params.append('single', 'true');
+    }
+
     return params.toString();
   }
 
@@ -243,7 +309,17 @@ class QueryBuilder {
       const endpoint = `/${this.table}${queryParams ? `?${queryParams}` : ''}`;
 
       const result = await this.client['request'](endpoint);
-      resolve(result);
+
+      // Se está em modo single, retornar apenas o primeiro item ou null
+      if (this.singleMode && result.data) {
+        const singleResult = {
+          data: Array.isArray(result.data) ? (result.data.length > 0 ? result.data[0] : null) : result.data,
+          error: result.error
+        };
+        resolve(singleResult);
+      } else {
+        resolve(result);
+      }
     } catch (error) {
       if (reject) {
         reject(error);
