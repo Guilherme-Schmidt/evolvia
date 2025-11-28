@@ -10,7 +10,7 @@ const generateToken = (userId) => {
 
 export const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, full_name, birth_date, location } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
@@ -36,6 +36,15 @@ export const register = async (req, res) => {
     );
 
     const user = result.rows[0];
+
+    // Criar perfil se dados foram fornecidos
+    if (full_name || birth_date || location) {
+      await query(
+        'INSERT INTO profiles (id, full_name, birth_date, location, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
+        [user.id, full_name || null, birth_date || null, location || null]
+      );
+    }
+
     const token = generateToken(user.id);
 
     res.status(201).json({

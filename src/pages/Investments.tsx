@@ -59,7 +59,7 @@ const Investments = () => {
       
       // Buscar dividendos recebidos
       const { data: dividendsData } = await supabase
-        .from("dividends_received")
+        .from("dividends")
         .select("amount");
       
       const total = dividendsData?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;

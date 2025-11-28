@@ -46,7 +46,7 @@ export const DividendsManager = ({ investments }: Props) => {
   const fetchDividends = async () => {
     try {
       const { data, error } = await supabase
-        .from("dividends_received")
+        .from("dividends")
         .select("*")
         .order("payment_date", { ascending: false });
 
@@ -80,7 +80,7 @@ export const DividendsManager = ({ investments }: Props) => {
       if (!investment) throw new Error("Investimento não encontrado");
 
       const { error } = await supabase
-        .from("dividends_received")
+        .from("dividends")
         .insert([{
           user_id: user.id,
           investment_id: investment.id,
@@ -133,7 +133,7 @@ export const DividendsManager = ({ investments }: Props) => {
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("dividends_received")
+        .from("dividends")
         .delete()
         .eq("id", id);
 

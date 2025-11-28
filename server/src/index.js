@@ -37,6 +37,7 @@ app.use('/api/investments', investmentsRoutes);
 app.use('/api/functions', functionsRoutes);
 
 // Generic routes for simple tables
+app.use('/api/profiles', createGenericRoutes('profiles'));
 app.use('/api/credit-cards', createGenericRoutes('credit_cards'));
 app.use('/api/budgets', createGenericRoutes('budgets'));
 app.use('/api/financial-goals', createGenericRoutes('financial_goals'));
