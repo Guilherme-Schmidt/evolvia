@@ -1,5 +1,5 @@
 // Cliente HTTP para API REST externa (Java Spring ou qualquer outro backend)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Tipos
 interface AuthResponse {
