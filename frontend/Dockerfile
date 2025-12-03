@@ -2,10 +2,17 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Aceitar variável de ambiente em build time
+ARG VITE_API_URL=http://localhost:3001/api
+
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Exportar variável para o build do Vite
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 FROM nginx:alpine

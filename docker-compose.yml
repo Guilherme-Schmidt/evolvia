@@ -39,9 +39,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001/api
     container_name: evolvia-frontend
-    environment:
-      VITE_API_URL: http://localhost:3001/api
     ports:
       - "8080:8080"
     depends_on:
