@@ -30,12 +30,12 @@ public class GenericCrudService {
     public <T> JpaRepository<T, UUID> getRepository(String tableName) {
         return switch (tableName) {
             case "profiles" -> (JpaRepository<T, UUID>) profileRepository;
-            case "credit-cards" -> (JpaRepository<T, UUID>) creditCardRepository;
+            case "credit_cards" -> (JpaRepository<T, UUID>) creditCardRepository;
             case "budgets" -> (JpaRepository<T, UUID>) budgetRepository;
-            case "financial-goals" -> (JpaRepository<T, UUID>) financialGoalRepository;
-            case "broker-accounts" -> (JpaRepository<T, UUID>) brokerAccountRepository;
+            case "financial_goals" -> (JpaRepository<T, UUID>) financialGoalRepository;
+            case "broker_accounts" -> (JpaRepository<T, UUID>) brokerAccountRepository;
             case "dividends" -> (JpaRepository<T, UUID>) dividendRepository;
-            case "treasury-bonds" -> (JpaRepository<T, UUID>) treasuryBondRepository;
+            case "treasury_bonds" -> (JpaRepository<T, UUID>) treasuryBondRepository;
             default -> throw new RuntimeException("Invalid table: " + tableName);
         };
     }
@@ -43,12 +43,12 @@ public class GenericCrudService {
     private Class<?> getEntityClass(String tableName) {
         return switch (tableName) {
             case "profiles" -> Profile.class;
-            case "credit-cards" -> CreditCard.class;
+            case "credit_cards" -> CreditCard.class;
             case "budgets" -> Budget.class;
-            case "financial-goals" -> FinancialGoal.class;
-            case "broker-accounts" -> BrokerAccount.class;
+            case "financial_goals" -> FinancialGoal.class;
+            case "broker_accounts" -> BrokerAccount.class;
             case "dividends" -> Dividend.class;
-            case "treasury-bonds" -> TreasuryBond.class;
+            case "treasury_bonds" -> TreasuryBond.class;
             default -> throw new RuntimeException("Invalid table: " + tableName);
         };
     }
@@ -59,12 +59,12 @@ public class GenericCrudService {
 
         return switch (tableName) {
             case "profiles" -> (List<T>) List.of(profileRepository.findById(user.getId()).orElse(null));
-            case "credit-cards" -> (List<T>) creditCardRepository.findByUserId(user.getId());
+            case "credit_cards" -> (List<T>) creditCardRepository.findByUserId(user.getId());
             case "budgets" -> (List<T>) budgetRepository.findByUserId(user.getId());
-            case "financial-goals" -> (List<T>) financialGoalRepository.findByUserId(user.getId());
-            case "broker-accounts" -> (List<T>) brokerAccountRepository.findByUserId(user.getId());
+            case "financial_goals" -> (List<T>) financialGoalRepository.findByUserId(user.getId());
+            case "broker_accounts" -> (List<T>) brokerAccountRepository.findByUserId(user.getId());
             case "dividends" -> (List<T>) dividendRepository.findByUserId(user.getId());
-            case "treasury-bonds" -> (List<T>) treasuryBondRepository.findByUserId(user.getId());
+            case "treasury_bonds" -> (List<T>) treasuryBondRepository.findByUserId(user.getId());
             default -> throw new RuntimeException("Invalid table: " + tableName);
         };
     }
