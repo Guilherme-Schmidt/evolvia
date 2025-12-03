@@ -2,12 +2,14 @@ package com.evolvia.service;
 
 import com.evolvia.model.*;
 import com.evolvia.repository.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -22,6 +24,7 @@ public class GenericCrudService {
     private final DividendRepository dividendRepository;
     private final TreasuryBondRepository treasuryBondRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     @SuppressWarnings("unchecked")
     public <T> JpaRepository<T, UUID> getRepository(String tableName) {
@@ -33,6 +36,19 @@ public class GenericCrudService {
             case "broker-accounts" -> (JpaRepository<T, UUID>) brokerAccountRepository;
             case "dividends" -> (JpaRepository<T, UUID>) dividendRepository;
             case "treasury-bonds" -> (JpaRepository<T, UUID>) treasuryBondRepository;
+            default -> throw new RuntimeException("Invalid table: " + tableName);
+        };
+    }
+
+    private Class<?> getEntityClass(String tableName) {
+        return switch (tableName) {
+            case "profiles" -> Profile.class;
+            case "credit-cards" -> CreditCard.class;
+            case "budgets" -> Budget.class;
+            case "financial-goals" -> FinancialGoal.class;
+            case "broker-accounts" -> BrokerAccount.class;
+            case "dividends" -> Dividend.class;
+            case "treasury-bonds" -> TreasuryBond.class;
             default -> throw new RuntimeException("Invalid table: " + tableName);
         };
     }
@@ -60,17 +76,27 @@ public class GenericCrudService {
     }
 
     @Transactional
-    public <T> T create(String tableName, T entity) {
+    public <T> T create(String tableName, Map<String, Object> entityData) {
         JpaRepository<T, UUID> repo = getRepository(tableName);
+        Class<?> entityClass = getEntityClass(tableName);
+
+        T entity = (T) objectMapper.convertValue(entityData, entityClass);
         return repo.save(entity);
     }
 
     @Transactional
-    public <T> T update(String tableName, UUID id, T entity) {
+    public <T> T update(String tableName, UUID id, Map<String, Object> entityData) {
         JpaRepository<T, UUID> repo = getRepository(tableName);
+        Class<?> entityClass = getEntityClass(tableName);
+
         if (!repo.existsById(id)) {
             throw new RuntimeException("Record not found");
         }
+
+        // Garante que o ID está presente nos dados
+        entityData.put("id", id);
+
+        T entity = (T) objectMapper.convertValue(entityData, entityClass);
         return repo.save(entity);
     }
 
