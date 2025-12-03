@@ -11,6 +11,254 @@ Configure a variável de ambiente `VITE_API_URL` no frontend para apontar para s
 
 ---
 
+## Configuração do PostgreSQL
+
+### application.properties (Spring Boot)
+```properties
+# Database
+spring.datasource.url=jdbc:postgresql://localhost:5432/evolvia
+spring.datasource.username=postgres
+spring.datasource.password=sua_senha
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA/Hibernate
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true
+
+# JWT
+jwt.secret=sua_chave_secreta_256_bits
+jwt.expiration=604800000
+```
+
+### Criação do Banco de Dados
+```sql
+-- Criar banco
+CREATE DATABASE evolvia;
+
+-- Conectar ao banco
+\c evolvia
+
+-- Criar extensão UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
+### Script de Inicialização Completo (schema.sql)
+```sql
+-- Criar tipos ENUM
+CREATE TYPE investment_type AS ENUM (
+  'stock', 'fii', 'etf', 'bdr', 'treasury', 'crypto', 'fixed_income', 'other'
+);
+
+CREATE TYPE transaction_type AS ENUM ('income', 'expense');
+
+CREATE TYPE transaction_category AS ENUM (
+  'salary', 'freelance', 'investment', 'other_income',
+  'food', 'transport', 'housing', 'entertainment', 'health',
+  'education', 'shopping', 'other_expense', 'credit_card',
+  'meal_voucher', 'utilities', 'insurance', 'subscription',
+  'personal_care', 'gifts', 'travel', 'clothing',
+  'home_maintenance', 'fuel', 'groceries', 'school', 'leisure',
+  'internet', 'phone'
+);
+
+-- Tabela de usuários
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de perfis
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  full_name VARCHAR(255),
+  birth_date DATE,
+  location VARCHAR(255),
+  avatar_url TEXT,
+  theme VARCHAR(20) DEFAULT 'light',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de cartões de crédito
+CREATE TABLE credit_cards (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  card_limit DECIMAL(10,2) DEFAULT 0,
+  due_day INTEGER NOT NULL CHECK (due_day >= 1 AND due_day <= 31),
+  color VARCHAR(20) DEFAULT '#3b82f6',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de transações
+CREATE TABLE transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  type transaction_type NOT NULL,
+  category transaction_category NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  description TEXT,
+  credit_card_id UUID REFERENCES credit_cards(id) ON DELETE SET NULL,
+  installments INTEGER DEFAULT 1,
+  current_installment INTEGER DEFAULT 1,
+  parent_transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de contas de corretoras
+CREATE TABLE broker_accounts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  broker_name VARCHAR(100) NOT NULL,
+  account_balance DECIMAL(15,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de investimentos
+CREATE TABLE investments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ticker VARCHAR(20) NOT NULL,
+  type investment_type NOT NULL,
+  quantity DECIMAL(15,8) NOT NULL,
+  average_price DECIMAL(15,4) NOT NULL,
+  purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  target_quantity DECIMAL(15,8) DEFAULT 0,
+  total_value DECIMAL(15,2),
+  broker VARCHAR(100),
+  broker_account_id UUID REFERENCES broker_accounts(id) ON DELETE SET NULL,
+  notes TEXT,
+  maturity_date DATE,
+  rate DECIMAL(8,4),
+  indexer VARCHAR(50),
+  issuer VARCHAR(100),
+  bond_type VARCHAR(50),
+  daily_liquidity BOOLEAN DEFAULT FALSE,
+  payment_form VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de transações de investimentos
+CREATE TABLE investment_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  investment_id UUID NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('buy', 'sell')),
+  quantity DECIMAL(15,8) NOT NULL,
+  price DECIMAL(15,4) NOT NULL,
+  total_amount DECIMAL(15,2) NOT NULL,
+  transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  broker_account_id UUID REFERENCES broker_accounts(id) ON DELETE SET NULL,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de dividendos recebidos
+CREATE TABLE dividends_received (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  investment_id UUID NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
+  ticker VARCHAR(20) NOT NULL,
+  amount DECIMAL(15,4) NOT NULL,
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  type VARCHAR(20) DEFAULT 'Dividendo',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabela de orçamentos
+CREATE TABLE budgets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category transaction_category NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),
+  year INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, category, month, year)
+);
+
+-- Tabela de metas financeiras
+CREATE TABLE financial_goals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(50) NOT NULL,
+  target_amount DECIMAL(15,2) NOT NULL,
+  current_amount DECIMAL(15,2) DEFAULT 0,
+  deadline DATE,
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índices para performance
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX idx_transactions_date ON transactions(date);
+CREATE INDEX idx_transactions_type ON transactions(type);
+CREATE INDEX idx_investments_user_id ON investments(user_id);
+CREATE INDEX idx_investments_ticker ON investments(ticker);
+CREATE INDEX idx_investment_transactions_user_id ON investment_transactions(user_id);
+CREATE INDEX idx_dividends_received_user_id ON dividends_received(user_id);
+CREATE INDEX idx_budgets_user_id ON budgets(user_id);
+CREATE INDEX idx_financial_goals_user_id ON financial_goals(user_id);
+
+-- Trigger para atualizar updated_at automaticamente
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_credit_cards_updated_at BEFORE UPDATE ON credit_cards
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON transactions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_broker_accounts_updated_at BEFORE UPDATE ON broker_accounts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_investments_updated_at BEFORE UPDATE ON investments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_investment_transactions_updated_at BEFORE UPDATE ON investment_transactions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_dividends_received_updated_at BEFORE UPDATE ON dividends_received
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_budgets_updated_at BEFORE UPDATE ON budgets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_financial_goals_updated_at BEFORE UPDATE ON financial_goals
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
+
+---
+
 ## Autenticação
 
 ### POST /auth/register
