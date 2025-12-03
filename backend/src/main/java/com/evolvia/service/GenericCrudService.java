@@ -1,0 +1,82 @@
+package com.evolvia.service;
+
+import com.evolvia.model.*;
+import com.evolvia.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class GenericCrudService {
+
+    private final ProfileRepository profileRepository;
+    private final CreditCardRepository creditCardRepository;
+    private final BudgetRepository budgetRepository;
+    private final FinancialGoalRepository financialGoalRepository;
+    private final BrokerAccountRepository brokerAccountRepository;
+    private final DividendRepository dividendRepository;
+    private final TreasuryBondRepository treasuryBondRepository;
+    private final UserRepository userRepository;
+
+    @SuppressWarnings("unchecked")
+    public <T> JpaRepository<T, UUID> getRepository(String tableName) {
+        return switch (tableName) {
+            case "profiles" -> (JpaRepository<T, UUID>) profileRepository;
+            case "credit-cards" -> (JpaRepository<T, UUID>) creditCardRepository;
+            case "budgets" -> (JpaRepository<T, UUID>) budgetRepository;
+            case "financial-goals" -> (JpaRepository<T, UUID>) financialGoalRepository;
+            case "broker-accounts" -> (JpaRepository<T, UUID>) brokerAccountRepository;
+            case "dividends" -> (JpaRepository<T, UUID>) dividendRepository;
+            case "treasury-bonds" -> (JpaRepository<T, UUID>) treasuryBondRepository;
+            default -> throw new RuntimeException("Invalid table: " + tableName);
+        };
+    }
+
+    public <T> List<T> findAll(String tableName, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return switch (tableName) {
+            case "profiles" -> (List<T>) List.of(profileRepository.findById(user.getId()).orElse(null));
+            case "credit-cards" -> (List<T>) creditCardRepository.findByUserId(user.getId());
+            case "budgets" -> (List<T>) budgetRepository.findByUserId(user.getId());
+            case "financial-goals" -> (List<T>) financialGoalRepository.findByUserId(user.getId());
+            case "broker-accounts" -> (List<T>) brokerAccountRepository.findByUserId(user.getId());
+            case "dividends" -> (List<T>) dividendRepository.findByUserId(user.getId());
+            case "treasury-bonds" -> (List<T>) treasuryBondRepository.findByUserId(user.getId());
+            default -> throw new RuntimeException("Invalid table: " + tableName);
+        };
+    }
+
+    public <T> T findById(String tableName, UUID id) {
+        JpaRepository<T, UUID> repo = getRepository(tableName);
+        return repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Record not found"));
+    }
+
+    @Transactional
+    public <T> T create(String tableName, T entity) {
+        JpaRepository<T, UUID> repo = getRepository(tableName);
+        return repo.save(entity);
+    }
+
+    @Transactional
+    public <T> T update(String tableName, UUID id, T entity) {
+        JpaRepository<T, UUID> repo = getRepository(tableName);
+        if (!repo.existsById(id)) {
+            throw new RuntimeException("Record not found");
+        }
+        return repo.save(entity);
+    }
+
+    @Transactional
+    public <T> void delete(String tableName, UUID id) {
+        JpaRepository<T, UUID> repo = getRepository(tableName);
+        repo.deleteById(id);
+    }
+}
