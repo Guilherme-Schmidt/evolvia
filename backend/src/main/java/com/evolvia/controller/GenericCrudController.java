@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -45,7 +46,7 @@ public class GenericCrudController {
     @Operation(summary = "Create a new record")
     public ResponseEntity<?> create(
             @PathVariable String table,
-            @RequestBody Object entity
+            @RequestBody Map<String, Object> entity
     ) {
         Object created = genericCrudService.create(table, entity);
         return ResponseEntity.ok(created);
@@ -56,7 +57,7 @@ public class GenericCrudController {
     public ResponseEntity<?> update(
             @PathVariable String table,
             @PathVariable UUID id,
-            @RequestBody Object entity
+            @RequestBody Map<String, Object> entity
     ) {
         Object updated = genericCrudService.update(table, id, entity);
         return ResponseEntity.ok(updated);
