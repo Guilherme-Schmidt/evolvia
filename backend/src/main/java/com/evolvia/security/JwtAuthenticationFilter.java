@@ -54,10 +54,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    logger.warn("Invalid JWT token for user: {}", userEmail);
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            logger.warn("JWT token has expired: {}", e.getMessage());
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            logger.warn("Malformed JWT token: {}", e.getMessage());
+        } catch (io.jsonwebtoken.SignatureException e) {
+            logger.warn("Invalid JWT signature: {}", e.getMessage());
+        } catch (io.jsonwebtoken.UnsupportedJwtException e) {
+            logger.warn("Unsupported JWT token: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.warn("JWT claims string is empty: {}", e.getMessage());
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+            logger.error("Cannot set user authentication - unexpected error: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
