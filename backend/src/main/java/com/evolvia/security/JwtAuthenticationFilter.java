@@ -34,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String userEmail;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.debug("No JWT token found in request headers for: {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             userEmail = jwtUtils.extractEmail(jwt);
+            logger.debug("JWT token found for user: {}", userEmail);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
@@ -54,10 +56,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    logger.debug("User authenticated successfully: {}", userEmail);
+                } else {
+                    logger.warn("JWT token validation failed for user: {}", userEmail);
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            logger.error("JWT token expired for request: {}", request.getRequestURI());
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            logger.error("Malformed JWT token for request: {}", request.getRequestURI());
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            logger.error("Invalid JWT signature for request: {}", request.getRequestURI());
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+            logger.error("Cannot set user authentication: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
