@@ -4,6 +4,8 @@ import com.evolvia.dto.AuthResponse;
 import com.evolvia.dto.LoginRequest;
 import com.evolvia.dto.RegisterRequest;
 import com.evolvia.dto.UserResponse;
+import com.evolvia.exception.ConflictException;
+import com.evolvia.exception.ResourceNotFoundException;
 import com.evolvia.model.User;
 import com.evolvia.repository.UserRepository;
 import com.evolvia.security.JwtUtils;
@@ -29,7 +31,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
 
         User user = new User();
@@ -55,7 +57,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getEmail()));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtils.generateToken(userDetails);
@@ -67,7 +69,7 @@ public class AuthService {
 
     public UserResponse getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
 
         return convertToUserResponse(user);
     }

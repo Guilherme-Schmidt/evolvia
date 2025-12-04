@@ -22,34 +22,22 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "Register a new user")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            AuthResponse response = authService.register(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        AuthResponse response = authService.register(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
     @Operation(summary = "Login user")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid credentials");
-        }
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user")
     @Operation(summary = "Get current user")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            UserResponse response = authService.getCurrentUser(userDetails.getUsername());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        UserResponse response = authService.getCurrentUser(userDetails.getUsername());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
