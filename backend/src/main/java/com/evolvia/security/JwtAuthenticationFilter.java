@@ -29,6 +29,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Permitir requisições OPTIONS (CORS preflight) sem autenticação
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            logger.debug("OPTIONS request detected, skipping JWT authentication");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
