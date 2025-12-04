@@ -1,5 +1,8 @@
 package com.evolvia.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum TransactionCategory {
     SALARY,
     FREELANCE,
@@ -24,11 +27,16 @@ public enum TransactionCategory {
     HOME_MAINTENANCE,
     OTHER_EXPENSE;
 
+    @JsonValue
     public String toPostgresValue() {
         return this.name().toLowerCase();
     }
 
+    @JsonCreator
     public static TransactionCategory fromPostgresValue(String value) {
+        if (value == null) {
+            return null;
+        }
         return TransactionCategory.valueOf(value.toUpperCase());
     }
 }
