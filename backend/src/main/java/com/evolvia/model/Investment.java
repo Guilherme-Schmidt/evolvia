@@ -29,7 +29,6 @@ public class Investment {
     @Column(nullable = false)
     private String ticker;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "investment_type")
     private InvestmentType type;
 

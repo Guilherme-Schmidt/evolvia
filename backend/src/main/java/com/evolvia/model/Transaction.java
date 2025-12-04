@@ -33,11 +33,9 @@ public class Transaction {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "transaction_type")
     private TransactionType type;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "transaction_category")
     private TransactionCategory category;
 
