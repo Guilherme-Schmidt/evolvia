@@ -27,7 +27,6 @@ public class InvestmentTransaction {
     @JoinColumn(name = "investment_id", nullable = false)
     private Investment investment;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "investment_transaction_type")
     private InvestmentTransactionType type;
 
