@@ -38,13 +38,14 @@ public class TransactionController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new transaction")
-    public ResponseEntity<Transaction> createTransaction(
+    @Operation(summary = "Create new transaction(s)")
+    public ResponseEntity<ApiResponse<List<Transaction>>> createTransactions(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody Transaction transaction
+            @RequestBody Object transactionData
     ) {
-        Transaction created = transactionService.createTransaction(userDetails.getUsername(), transaction);
-        return ResponseEntity.ok(created);
+        List<Transaction> created = transactionService.createTransactions(
+                userDetails.getUsername(), transactionData);
+        return ResponseEntity.ok(ApiResponse.success(created));
     }
 
     @DeleteMapping("/{id}")
