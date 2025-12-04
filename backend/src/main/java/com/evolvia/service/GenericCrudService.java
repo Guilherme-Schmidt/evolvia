@@ -58,7 +58,9 @@ public class GenericCrudService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return switch (tableName) {
-            case "profiles" -> (List<T>) List.of(profileRepository.findById(user.getId()).orElse(null));
+            case "profiles" -> (List<T>) profileRepository.findById(user.getId())
+                    .map(List::of)
+                    .orElse(List.of());
             case "credit_cards" -> (List<T>) creditCardRepository.findByUserId(user.getId());
             case "budgets" -> (List<T>) budgetRepository.findByUserId(user.getId());
             case "financial_goals" -> (List<T>) financialGoalRepository.findByUserId(user.getId());
